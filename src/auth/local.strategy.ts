@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport'
 import { Strategy as BaseLocalStrategy } from 'passport-local'
 
 import type { AuthService } from 'src/auth/auth.service'
+import type { LoginInputDto } from 'src/auth/dto/loginInput.dto'
 import type { Users } from 'src/entities/users.entity'
 
 type PasswordOmitUser = Omit<Users, 'password'>
@@ -13,10 +14,7 @@ export class LocalStrategy extends PassportStrategy(BaseLocalStrategy) {
     super()
   }
 
-  async validate(
-    name: Users['name'],
-    pass: Users['password'],
-  ): Promise<PasswordOmitUser> {
+  async validate({ name, pass }: LoginInputDto): Promise<PasswordOmitUser> {
     const user = await this.authService.validateUser(name, pass)
 
     if (!user) {
