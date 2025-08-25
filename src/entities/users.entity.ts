@@ -28,7 +28,8 @@ export class Users {
   @Column('varchar')
   password: string
 
-  @Column('tinyint')
+  //   postgresではtinyIntに未対応のため
+  @Column('smallint')
   closing_day: number
 
   @CreateDateColumn()
