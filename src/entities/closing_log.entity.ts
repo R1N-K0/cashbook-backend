@@ -1,6 +1,13 @@
 import { Users } from 'src/entities/users.entity'
-import { Column, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm'
 
+@Entity()
 export class ClosingLogs {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   readonly id: number

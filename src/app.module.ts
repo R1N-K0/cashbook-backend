@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import AppDataSource from 'src/app.datasource'
+import AppDataSource from 'src/data-soruce'
 
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
