@@ -11,6 +11,8 @@ export class UsersService {
     private readonly usersRepository: Repository<Users>,
   ) {}
 
+  async create() {}
+
   async findOne(name: Users['name']): Promise<Users> {
     const user = await this.usersRepository.findOneBy({ name })
     if (!user) throw new NotFoundException('ユーザーが見つかりませんでした。')
