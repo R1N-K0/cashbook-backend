@@ -1,10 +1,13 @@
-import { Column, PrimaryGeneratedColumn } from 'typeorm'
+import { Users } from 'src/entities/users.entity'
+import { Column, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
 
-export class ClosingLog {
+export class ClosingLogs {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   readonly id: number
 
-  //   ユーザーとのリレーション
+  @ManyToOne(() => Users, (user) => user.closing_logs)
+  @JoinColumn({ name: 'user_id' })
+  user: Users
 
   @Column('date')
   closing_date: string

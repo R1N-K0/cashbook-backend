@@ -1,20 +1,28 @@
 import { Categories } from 'src/entities/categories.entity'
+import { TransactionsReceipts } from 'src/entities/transaction_receipts.entity'
+import { Users } from 'src/entities/users.entity'
 import {
   Column,
   CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
 
 @Entity()
 export class Transactions {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   readonly id: number
 
-  //   ユーザーとのリレーション
+  @ManyToOne(() => Users, (user) => user.transactions)
+  @JoinColumn({ name: 'user_id' })
+  user: Users
+
+  @OneToMany(() => TransactionsReceipts, (receipt) => receipt.transaction)
+  receipts: TransactionsReceipts[]
 
   //   dateはstringにマッピングされるのでstring型で定義した.
   @Column('date')
