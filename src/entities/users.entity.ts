@@ -8,6 +8,11 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm'
 
+enum UserRole {
+  REGULAR = 'regular',
+  ADMIN = 'admin',
+}
+
 @Entity()
 export class Users {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
@@ -31,6 +36,9 @@ export class Users {
   //   postgresではtinyIntに未対応のため
   @Column('smallint')
   closing_day: number
+
+  @Column('enum', { default: UserRole.REGULAR, enum: UserRole })
+  role: UserRole
 
   @CreateDateColumn()
   readonly created_at?: Date
