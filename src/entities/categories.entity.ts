@@ -8,7 +8,7 @@ enum CategoryType {
 
 @Entity()
 export class Categories {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   readonly id: number
 
   @Column('varchar', { length: 255, nullable: false })
