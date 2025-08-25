@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Transactions } from 'src/entities/transactions.entity'
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 
 enum CategoryType {
   INCOME = 'income',
@@ -6,9 +7,9 @@ enum CategoryType {
 }
 
 @Entity()
-export class categories {
+export class Categories {
   @PrimaryGeneratedColumn()
-  id: number
+  readonly id: number
 
   @Column('varchar', { length: 255, nullable: false })
   name: string
@@ -18,4 +19,7 @@ export class categories {
 
   @Column('varchar', { length: 7 })
   color: string
+
+  @OneToMany(() => Transactions, (transaction) => transaction.category)
+  transactions: Transactions[]
 }
