@@ -1,7 +1,7 @@
 import { Transactions } from 'src/entities/transactions.entity'
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 
-enum CategoryType {
+export enum CategoryType {
   INCOME = 'income',
   EXPENSE = 'expense',
 }
