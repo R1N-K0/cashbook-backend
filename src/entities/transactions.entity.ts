@@ -14,7 +14,7 @@ export class Transactions {
   @PrimaryGeneratedColumn()
   readonly id: number
 
-  //   ユーザーカラムの追加
+  //   ユーザーとのリレーション
 
   //   dateはstringにマッピングされるのでstring型で定義した.
   @Column('date')
