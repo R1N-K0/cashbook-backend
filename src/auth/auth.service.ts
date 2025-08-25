@@ -8,7 +8,7 @@ import type { UsersService } from 'src/users/users.service'
 
 type PasswordOmitUser = Omit<Users, 'password'>
 
-interface JWTPayload {
+export interface JWTPayload {
   userId: Users['id']
   username: Users['name']
 }
