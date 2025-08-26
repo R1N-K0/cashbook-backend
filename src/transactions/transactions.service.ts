@@ -46,7 +46,19 @@ export class TransactionsService {
     return transactions
   }
 
-  async findOne(id: number) {}
+  async findOne(id: number) {
+    const transaction = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.category', 'c')
+      .leftJoin('t.user', 'u')
+      .addSelect(['u.id', 'u.name', 'u.created_at'])
+      .where('t.id = :id', { id })
+      .getOne()
+
+    if (!transaction) throw new NotFoundException('データが存在しません')
+
+    return transaction
+  }
 
   async update(
     id: number,
