@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
@@ -8,6 +9,8 @@ import {
   Request,
 } from '@nestjs/common'
 import { PasswordOmitUser } from 'src/auth/types/password-omit-user'
+import { CreateTransactionDto } from 'src/transactions/dto/create-transaction.dto'
+import { UpdateTransactionDto } from 'src/transactions/dto/update-transaction.dto'
 import { TransactionsService } from 'src/transactions/transactions.service'
 
 @Controller('transactions')
@@ -15,8 +18,11 @@ export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Post()
-  async create(@Request() req: { user: PasswordOmitUser }) {
-    return this.transactionsService.create(req.user)
+  async create(
+    @Request() req: { user: PasswordOmitUser },
+    @Body() createTransactionDto: CreateTransactionDto,
+  ) {
+    return this.transactionsService.create(req.user, createTransactionDto)
   }
 
   //   各クエリの存在判定で検索条件を分岐させる(未実装)
@@ -34,8 +40,9 @@ export class TransactionsController {
   async update(
     @Param('id') id: number,
     @Request() req: { user: PasswordOmitUser },
+    @Body() updateTransactionDto: UpdateTransactionDto,
   ) {
-    return this.transactionsService.update(id, req.user)
+    return this.transactionsService.update(id, req.user, updateTransactionDto)
   }
 
   @Delete(':id')
