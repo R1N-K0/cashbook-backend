@@ -80,6 +80,7 @@ const eslintConfig = [
       'src/**/*.module.ts',
       'src/**/*.service.ts',
       'src/**/*.controller.ts',
+      'src/**/*.strategy.ts',
     ],
     rules: {
       '@typescript-eslint/consistent-type-imports': 'off',

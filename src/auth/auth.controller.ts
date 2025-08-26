@@ -14,10 +14,9 @@ import type { PasswordOmitUser } from 'src/auth/types/password-omit-user'
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
+  @UseGuards(AuthGuard('local'))
   @Post('/login')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard('local'))
   async login(@Request() req: { user: PasswordOmitUser }) {
     const user = req.user
 
