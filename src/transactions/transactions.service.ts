@@ -1,12 +1,9 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { PasswordOmitUser } from 'src/auth/types/password-omit-user'
 import { RequestUser } from 'src/auth/types/request-user'
-import { CategoriesService } from 'src/categories/categories.service'
 import { Transactions } from 'src/entities/transactions.entity'
 import { CreateTransactionDto } from 'src/transactions/dto/create-transaction.dto'
 import { UpdateTransactionDto } from 'src/transactions/dto/update-transaction.dto'
-import { UsersService } from 'src/users/users.service'
 import { Repository } from 'typeorm'
 
 @Injectable()
@@ -14,35 +11,63 @@ export class TransactionsService {
   constructor(
     @InjectRepository(Transactions)
     private readonly transactionsRepository: Repository<Transactions>,
-    private readonly usersService: UsersService,
-    private readonly categoriesService: CategoriesService,
   ) {}
 
   async create(user: RequestUser, createTransactionDto: CreateTransactionDto) {
-    const userData = await this.usersService.findOneById(user.id)
-    const category = await this.categoriesService.findOne(
-      createTransactionDto.category_id,
-    )
     const transaction = await this.transactionsRepository.create({
       ...createTransactionDto,
-      category,
+      category: { id: createTransactionDto.category_id },
       created_user: user.name,
       updated_user: user.name,
-      user: userData,
+      user: { id: user.id },
     })
 
     await this.transactionsRepository.save(transaction)
   }
 
-  async findAll() {}
+  async findAll() {
+    const transactions = await this.transactionsRepository.find({
+      order: {
+        created_at: 'DESC',
+      },
+      relations: {
+        category: true,
+      },
+      select: {
+        amount: true,
+        created_at: true,
+        date: true,
+        description: true,
+        editable: true,
+        id: true,
+        updated_at: true,
+      },
+    })
+    return transactions
+  }
 
   async findOne(id: number) {}
 
   async update(
     id: number,
-    user: PasswordOmitUser,
-    updatetransactionDto: UpdateTransactionDto,
-  ) {}
+    user: RequestUser,
+    updateTransactionDto: UpdateTransactionDto,
+  ) {
+    const transaction = await this.transactionsRepository.findOneBy({ id })
+    if (!transaction) throw new NotFoundException('データは存在しません')
 
-  async remove(id: number) {}
+    await this.transactionsRepository.update(id, {
+      ...updateTransactionDto,
+      category: { id: updateTransactionDto.category_id },
+      updated_user: user.name,
+    })
+  }
+
+  //   消せる権限などの設定も考えておく
+  async remove(id: number) {
+    const transaction = await this.transactionsRepository.findOneBy({ id })
+    if (!transaction) throw new NotFoundException('データは存在しません')
+
+    await this.transactionsRepository.delete(id)
+  }
 }

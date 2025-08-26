@@ -10,7 +10,6 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
-import { PasswordOmitUser } from 'src/auth/types/password-omit-user'
 import { RequestUser } from 'src/auth/types/request-user'
 import { CreateTransactionDto } from 'src/transactions/dto/create-transaction.dto'
 import { UpdateTransactionDto } from 'src/transactions/dto/update-transaction.dto'
@@ -43,7 +42,7 @@ export class TransactionsController {
   @Patch(':id')
   async update(
     @Param('id') id: number,
-    @Request() req: { user: PasswordOmitUser },
+    @Request() req: { user: RequestUser },
     @Body() updateTransactionDto: UpdateTransactionDto,
   ) {
     return this.transactionsService.update(id, req.user, updateTransactionDto)
