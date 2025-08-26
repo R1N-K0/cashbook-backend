@@ -7,19 +7,23 @@ import {
   Patch,
   Post,
   Request,
+  UseGuards,
 } from '@nestjs/common'
+import { AuthGuard } from '@nestjs/passport'
 import { PasswordOmitUser } from 'src/auth/types/password-omit-user'
+import { RequestUser } from 'src/auth/types/request-user'
 import { CreateTransactionDto } from 'src/transactions/dto/create-transaction.dto'
 import { UpdateTransactionDto } from 'src/transactions/dto/update-transaction.dto'
 import { TransactionsService } from 'src/transactions/transactions.service'
 
+@UseGuards(AuthGuard('jwt'))
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Post()
   async create(
-    @Request() req: { user: PasswordOmitUser },
+    @Request() req: { user: RequestUser },
     @Body() createTransactionDto: CreateTransactionDto,
   ) {
     return this.transactionsService.create(req.user, createTransactionDto)

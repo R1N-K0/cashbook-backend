@@ -47,4 +47,10 @@ export class UsersService {
     const hash = await bcrypt.hash(password, saltOrRounds)
     return hash
   }
+
+  async findOneById(id: Users['id']): Promise<Users> {
+    const user = await this.usersRepository.findOneBy({ id })
+    if (!user) throw new NotFoundException('ユーザーが見つかりませんでした。')
+    return user
+  }
 }

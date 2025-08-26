@@ -2,17 +2,16 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
 import { Strategy as BaseJwtStrategy, ExtractJwt } from 'passport-jwt'
-
-import type { Users } from 'src/entities/users.entity'
-
-interface JWTPayload {
-  userId: Users['id']
-  username: Users['name']
-}
+import { JWTPayload } from 'src/auth/types/jwt-payload'
+import { RequestUser } from 'src/auth/types/request-user'
+import { UsersService } from 'src/users/users.service'
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(BaseJwtStrategy) {
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
+  ) {
     super({
       ignoreExpiration: false,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -20,7 +19,15 @@ export class JwtStrategy extends PassportStrategy(BaseJwtStrategy) {
     })
   }
 
-  async validate(payload: JWTPayload): Promise<JWTPayload> {
-    return { userId: payload.userId, username: payload.username }
+  async validate(payload: JWTPayload): Promise<RequestUser> {
+    console.log(payload)
+    const user = await this.usersService.findOneById(payload.userId)
+    const requestUser: RequestUser = {
+      closing_day: user.closing_day,
+      id: user.id,
+      name: user.name,
+      role: user.role,
+    }
+    return requestUser
   }
 }

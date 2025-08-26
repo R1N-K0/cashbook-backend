@@ -10,7 +10,6 @@ import { AppService } from './app.service'
 import { CategoriesController } from './categories/categories.controller'
 import { CategoriesModule } from './categories/categories.module'
 import { TransactionsModule } from './transactions/transactions.module'
-import { TransactionsService } from './transactions/transactions.service'
 
 @Module({
   controllers: [AppController, CategoriesController],
@@ -24,6 +23,6 @@ import { TransactionsService } from './transactions/transactions.service'
     CategoriesModule,
     TransactionsModule,
   ],
-  providers: [AppService, TransactionsService],
+  providers: [AppService],
 })
 export class AppModule {}
