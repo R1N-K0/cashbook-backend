@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common'
+import { CreateCategoryDto } from 'src/categories/dto/create-category.dto'
+import { UpdateCategoryDto } from 'src/categories/dto/update-category.dto'
 import { Categories } from 'src/entities/categories.entity'
 import { Repository } from 'typeorm'
 
@@ -6,13 +8,13 @@ import { Repository } from 'typeorm'
 export class CategoriesService {
   constructor(private readonly categoriesRepository: Repository<Categories>) {}
 
-  async create() {}
+  async create(createCategoryDto: CreateCategoryDto) {}
 
   async findAll() {}
 
-  async findOne() {}
+  async findOne(id: number) {}
 
-  async update() {}
+  async update(updateCategoryDto: UpdateCategoryDto) {}
 
-  async remove() {}
+  async remove(id: number) {}
 }
