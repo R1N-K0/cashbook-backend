@@ -7,9 +7,11 @@ import { UsersModule } from 'src/users/users.module'
 
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
+import { CategoriesController } from './categories/categories.controller'
+import { CategoriesModule } from './categories/categories.module'
 
 @Module({
-  controllers: [AppController],
+  controllers: [AppController, CategoriesController],
   imports: [
     TypeOrmModule.forRoot(AppDataSource.options),
     ConfigModule.forRoot({
@@ -17,6 +19,7 @@ import { AppService } from './app.service'
     }),
     UsersModule,
     AuthModule,
+    CategoriesModule,
   ],
   providers: [AppService],
 })
