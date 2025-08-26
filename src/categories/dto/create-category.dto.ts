@@ -13,10 +13,10 @@ export class CreateCategoryDto {
   @MaxLength(255)
   name: string
 
-  @IsEnum(CategoryType)
+  @IsEnum(CategoryType, { message: 'データ形式が違います' })
   type: CategoryType
 
-  @IsString()
+  @IsString({ message: 'データ形式が違います' })
   @Validate(IsColorCode)
   color: string
 }
