@@ -56,7 +56,10 @@ const eslintConfig = [
       'import/no-duplicates': 'error',
       '@typescript-eslint/consistent-type-imports': [
         'error',
-        { prefer: 'type-imports', fixStyle: 'separate-type-imports' },
+        {
+          prefer: 'type-imports',
+          fixStyle: 'separate-type-imports',
+        },
       ],
 
       '@typescript-eslint/no-unused-vars': [
@@ -69,6 +72,17 @@ const eslintConfig = [
         },
       ],
       'object-shorthand': 'error',
+    },
+  },
+
+  {
+    files: [
+      'src/**/*.module.ts',
+      'src/**/*.service.ts',
+      'src/**/*.controller.ts',
+    ],
+    rules: {
+      '@typescript-eslint/consistent-type-imports': 'off',
     },
   },
 ]

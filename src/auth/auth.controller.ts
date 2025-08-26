@@ -7,8 +7,8 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
+import { AuthService } from 'src/auth/auth.service'
 
-import type { AuthService } from 'src/auth/auth.service'
 import type { PasswordOmitUser } from 'src/auth/types/password-omit-user'
 
 @Controller('auth')
