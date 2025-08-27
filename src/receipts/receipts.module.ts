@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { TransactionsReceipts } from 'src/entities/transaction_receipts.entity'
-import { Transactions } from 'src/entities/transactions.entity'
+import { TransactionsModule } from 'src/transactions/transactions.module'
 
 import { ReceiptsController } from './receipts.controller'
 import { ReceiptsService } from './receipts.service'
@@ -9,7 +9,10 @@ import { ReceiptsService } from './receipts.service'
 @Module({
   controllers: [ReceiptsController],
   exports: [ReceiptsService],
-  imports: [TypeOrmModule.forFeature([TransactionsReceipts, Transactions])],
+  imports: [
+    TypeOrmModule.forFeature([TransactionsReceipts]),
+    TransactionsModule,
+  ],
   providers: [ReceiptsService],
 })
 export class ReceiptsModule {}
