@@ -8,6 +8,7 @@ import { ClosingLogsService } from './closing-logs.service'
 
 @Module({
   controllers: [ClosingLogsController],
+  exports: [ClosingLogsService],
   imports: [TypeOrmModule.forFeature([ClosingLogs]), UsersModule],
   providers: [ClosingLogsService],
 })

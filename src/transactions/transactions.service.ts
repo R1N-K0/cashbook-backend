@@ -120,6 +120,8 @@ export class TransactionsService {
     return transaction
   }
 
+  async findClosingTransactions() {}
+
   async update(
     id: number,
     user: RequestUser,
