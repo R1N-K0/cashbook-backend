@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { TransactionsReceipts } from 'src/entities/transaction_receipts.entity'
+import { CreateReceiptDto } from 'src/receipts/dto/create-receipt.dto'
 import { Repository } from 'typeorm'
 
 @Injectable()
@@ -10,11 +11,9 @@ export class ReceiptsService {
     private readonly receiptsRepository: Repository<TransactionsReceipts>,
   ) {}
 
-  async create() {}
+  async create(createReceiptDto: CreateReceiptDto) {}
 
-  async findOne() {}
+  async findOne(id: number) {}
 
-  async update() {}
-
-  async delete() {}
+  async remove(id: number) {}
 }
