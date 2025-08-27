@@ -1,6 +1,7 @@
 import { Users } from 'src/entities/users.entity'
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -20,6 +21,6 @@ export class ClosingLogs {
   closingDate: string
 
   //   postgresではdatetimeがないのでtimestampで代用
-  @Column('timestamp', { name: 'processed_at', nullable: true })
+  @CreateDateColumn({ name: 'processed_at', type: 'timestamp' })
   processedAt: Date
 }
