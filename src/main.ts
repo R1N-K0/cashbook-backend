@@ -15,14 +15,34 @@ async function bootstrap() {
   )
 
   const options = new DocumentBuilder()
+    .addGlobalResponse({
+      description: 'サーバー側のエラー',
+      status: 500,
+    })
+    .addGlobalResponse({
+      description: '認証に失敗',
+      status: 401,
+    })
     .setTitle('CashBook API')
     .setDescription(
       '開発課題「出納表管理アプリ」のバックエンドAPIのドキュメントです',
     )
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        bearerFormat: 'JWT',
+        description: 'JWTトークンを設定していください',
+        in: 'header',
+        name: 'Authorize',
+        scheme: 'bearer',
+        type: 'http',
+      },
+      'accessToken',
+    )
+    .addSecurityRequirements('ApiBearerAuth')
     .build()
-  const documentFactory = () => SwaggerModule.createDocument(app, options)
-  SwaggerModule.setup('swagger', app, documentFactory, {
+  const document = SwaggerModule.createDocument(app, options)
+  SwaggerModule.setup('swagger', app, document, {
     jsonDocumentUrl: 'swagger/json',
   })
   await app.listen(process.env.PORT ?? 3000)
