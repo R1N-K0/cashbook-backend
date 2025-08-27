@@ -23,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(BaseJwtStrategy) {
     console.log(payload)
     const user = await this.usersService.findOneById(payload.userId)
     const requestUser: RequestUser = {
-      closing_day: user.closing_day,
+      closingDay: user.closingDay,
       id: user.id,
       name: user.name,
       role: user.role,
