@@ -1,16 +1,12 @@
 import { Injectable } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
+import { JWTPayload } from 'src/auth/types/jwt-payload'
 import { UsersService } from 'src/users/users.service'
 
 import type { LoginResponseDto } from 'src/auth/dto/loginResponse.dto'
 import type { PasswordOmitUser } from 'src/auth/types/password-omit-user'
 import type { Users } from 'src/entities/users.entity'
-
-export interface JWTPayload {
-  userId: Users['id']
-  username: Users['name']
-}
 
 @Injectable()
 export class AuthService {
