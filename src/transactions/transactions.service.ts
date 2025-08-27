@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { RequestUser } from 'src/auth/types/request-user'
+import { CategoriesService } from 'src/categories/categories.service'
 import { Transactions } from 'src/entities/transactions.entity'
 import { CreateTransactionDto } from 'src/transactions/dto/create-transaction.dto'
 import { UpdateTransactionDto } from 'src/transactions/dto/update-transaction.dto'
+import { UsersService } from 'src/users/users.service'
 import { Brackets, Repository } from 'typeorm'
 
 import type { SearchQuery } from 'src/transactions/types/search-query'
@@ -13,15 +15,25 @@ export class TransactionsService {
   constructor(
     @InjectRepository(Transactions)
     private readonly transactionsRepository: Repository<Transactions>,
+    private readonly categoriesService: CategoriesService,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(user: RequestUser, createTransactionDto: CreateTransactionDto) {
-    const transaction = await this.transactionsRepository.create({
+    const category = await this.categoriesService.findOne(
+      createTransactionDto.category_id,
+    )
+
+    if (!category) throw new NotFoundException('カテゴリーが存在しません')
+
+    const loginUser = await this.usersService.findOneById(user.id)
+    if (!loginUser) throw new NotFoundException('ユーザーが存在しません')
+    const transaction = this.transactionsRepository.create({
       ...createTransactionDto,
-      category: { id: createTransactionDto.category_id },
+      category,
       created_user: user.name,
       updated_user: user.name,
-      user: { id: user.id },
+      user: loginUser,
     })
 
     await this.transactionsRepository.save(transaction)
@@ -40,7 +52,7 @@ export class TransactionsService {
       ])
       .leftJoinAndSelect('t.category', 'c')
       .leftJoin('t.user', 'u')
-      .addSelect('u.id', 'u.name')
+      .addSelect(['u.id', 'u.name'])
       .where('1 = 1')
 
     if ('q' in query) {
