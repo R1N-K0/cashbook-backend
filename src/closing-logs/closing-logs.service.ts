@@ -29,11 +29,27 @@ export class ClosingLogsService {
       user: loginUser,
     })
 
-    return await this.LogsRepository.save(closingLog)
+    await this.LogsRepository.save(closingLog)
+    return {
+      closingDate: closingLog.closingDate,
+      id: closingLog.id,
+    }
   }
 
-  async findAll() {
-    return await this.LogsRepository.find()
+  async findAll(query) {
+    const qb = this.LogsRepository.createQueryBuilder('l')
+      .leftJoin('l.user', 'u')
+      .where('1 = 1')
+
+    if ('userId' in query) {
+      const user = await this.usersService.findOneById(query.userId)
+      if (!user) throw new NotFoundException('データが存在しません')
+      qb.andWhere('u.id = :userId', { userId: query.userId })
+    }
+
+    return await qb.getMany()
+
+    // return await this.LogsRepository.find()
   }
 
   async findOne(id: number) {
