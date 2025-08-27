@@ -17,14 +17,14 @@ export class TransactionsReceipts {
   @JoinColumn({ name: 'transaction_id' })
   transaction: Transactions
 
-  @Column('varchar')
-  s3_url: string
+  @Column('varchar', { name: 's3_url' })
+  s3Url: string
 
-  @Column('varchar')
-  file_name: string
+  @Column('varchar', { name: 'file_name' })
+  fileName: string
 
-  @Column('varchar')
-  mime_type: string
+  @Column('varchar', { name: 'mime_type' })
+  mimeType: string
 
   @CreateDateColumn()
   readonly uploaded_at?: Date

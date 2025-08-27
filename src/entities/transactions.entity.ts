@@ -41,11 +41,11 @@ export class Transactions {
   @Column('int')
   amount: number
 
-  @Column('varchar')
-  created_user: string
+  @Column('varchar', { name: 'created_user' })
+  createdUser: string
 
-  @Column('varchar')
-  updated_user: string
+  @Column('varchar', { name: 'updated_user' })
+  updatedUser: string
 
   @Column('boolean', { default: true })
   editable: boolean
