@@ -9,8 +9,8 @@ import {
 
 export class CreateTransactionDto {
   @IsInt()
-  @IsNotEmpty({ message: 'category_idは必須です' })
-  category_id: number
+  @IsNotEmpty({ message: 'categoryIdは必須です' })
+  categoryId: number
 
   @IsString({ message: 'データ形式が違います' })
   @IsDateString()

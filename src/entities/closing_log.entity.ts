@@ -12,14 +12,14 @@ export class ClosingLogs {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   readonly id: number
 
-  @ManyToOne(() => Users, (user) => user.closing_logs)
+  @ManyToOne(() => Users, (user) => user.closingLogs)
   @JoinColumn({ name: 'user_id' })
   user: Users
 
-  @Column('date')
-  closing_date: string
+  @Column('date', { name: 'closing_date' })
+  closingDate: string
 
   //   postgresではdatetimeがないのでtimestampで代用
-  @Column('timestamp', { nullable: true })
-  processed_at: Date
+  @Column('timestamp', { name: 'processed_at', nullable: true })
+  processedAt: Date
 }

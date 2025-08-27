@@ -34,7 +34,7 @@ export class AuthService {
     const payload: JWTPayload = { userId: user.id, username: user.name }
 
     return {
-      access_token: this.jwtService.sign(payload),
+      accessToken: this.jwtService.sign(payload),
     } as LoginResponseDto
   }
 }

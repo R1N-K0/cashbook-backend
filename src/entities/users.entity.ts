@@ -22,7 +22,7 @@ export class Users {
   transactions: Transactions[]
 
   @OneToMany(() => ClosingLogs, (closingLog) => closingLog.user)
-  closing_logs: ClosingLogs[]
+  closingLogs: ClosingLogs[]
 
   @Column('varchar', { length: 255 })
   name: string
@@ -34,8 +34,8 @@ export class Users {
   password: string
 
   //   postgresではtinyIntに未対応のため
-  @Column('smallint')
-  closing_day: number
+  @Column('smallint', { name: 'closing_day' })
+  closingDay: number
 
   @Column('enum', { default: UserRole.REGULAR, enum: UserRole })
   role: UserRole

@@ -39,5 +39,5 @@ export class CreateUserDto {
   @IsNotEmpty({ message: '締め日を入力してください' })
   @Min(1)
   @Max(31)
-  readonly closing_day: number
+  readonly closingDay: number
 }

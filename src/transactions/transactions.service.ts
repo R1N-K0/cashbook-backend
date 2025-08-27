@@ -26,7 +26,7 @@ export class TransactionsService {
 
   async create(user: RequestUser, createTransactionDto: CreateTransactionDto) {
     const category = await this.categoriesService.findOne(
-      createTransactionDto.category_id,
+      createTransactionDto.categoryId,
     )
 
     if (!category) throw new NotFoundException('カテゴリーが存在しません')
@@ -129,9 +129,9 @@ export class TransactionsService {
     if (!transaction.editable && user.role === UserRole.REGULAR)
       throw new ForbiddenException('編集不可データです')
 
-    if (updateTransactionDto.category_id) {
+    if (updateTransactionDto.categoryId) {
       const category = await this.categoriesService.findOne(
-        updateTransactionDto.category_id,
+        updateTransactionDto.categoryId,
       )
       transaction.category = category
     }
