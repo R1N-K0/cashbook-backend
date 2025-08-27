@@ -36,8 +36,8 @@ export class TransactionsService {
     const transaction = this.transactionsRepository.create({
       ...createTransactionDto,
       category,
-      created_user: user.name,
-      updated_user: user.name,
+      createdUser: user.name,
+      updatedUser: user.name,
       user: loginUser,
     })
 
@@ -137,7 +137,7 @@ export class TransactionsService {
     }
 
     this.transactionsRepository.merge(transaction, updateTransactionDto)
-    transaction.updated_user = user.name
+    transaction.updatedUser = user.name
     await this.transactionsRepository.save(transaction)
   }
 
