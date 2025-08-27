@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { RequestUser } from 'src/auth/types/request-user'
 import { CategoriesService } from 'src/categories/categories.service'
 import { Transactions } from 'src/entities/transactions.entity'
+import { UserRole } from 'src/entities/users.entity'
 import { CreateTransactionDto } from 'src/transactions/dto/create-transaction.dto'
 import { UpdateTransactionDto } from 'src/transactions/dto/update-transaction.dto'
 import { UsersService } from 'src/users/users.service'
@@ -121,6 +126,9 @@ export class TransactionsService {
     const transaction = await this.transactionsRepository.findOneBy({ id })
     if (!transaction) throw new NotFoundException('データが存在しません')
 
+    if (!transaction.editable && user.role === UserRole.REGULAR)
+      throw new ForbiddenException('編集不可データです')
+
     if (updateTransactionDto.category_id) {
       const category = await this.categoriesService.findOne(
         updateTransactionDto.category_id,
@@ -133,11 +141,11 @@ export class TransactionsService {
     await this.transactionsRepository.save(transaction)
   }
 
-  //   消せる権限などの設定も考えておく
-  async remove(id: number) {
+  async remove(id: number, user: RequestUser) {
     const transaction = await this.transactionsRepository.findOneBy({ id })
     if (!transaction) throw new NotFoundException('データが存在しません')
 
-    await this.transactionsRepository.delete(id)
+    if (!transaction.editable && user.role === UserRole.REGULAR)
+      await this.transactionsRepository.delete(id)
   }
 }

@@ -52,7 +52,7 @@ export class TransactionsController {
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: number) {
-    return this.transactionsService.remove(id)
+  async delete(@Param('id') id: number, @Request() req: { user: RequestUser }) {
+    return this.transactionsService.remove(id, req.user)
   }
 }
