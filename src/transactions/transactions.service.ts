@@ -119,19 +119,24 @@ export class TransactionsService {
     updateTransactionDto: UpdateTransactionDto,
   ) {
     const transaction = await this.transactionsRepository.findOneBy({ id })
-    if (!transaction) throw new NotFoundException('データは存在しません')
+    if (!transaction) throw new NotFoundException('データが存在しません')
 
-    await this.transactionsRepository.update(id, {
-      ...updateTransactionDto,
-      category: { id: updateTransactionDto.category_id },
-      updated_user: user.name,
-    })
+    if (updateTransactionDto.category_id) {
+      const category = await this.categoriesService.findOne(
+        updateTransactionDto.category_id,
+      )
+      transaction.category = category
+    }
+
+    this.transactionsRepository.merge(transaction, updateTransactionDto)
+    transaction.updated_user = user.name
+    await this.transactionsRepository.save(transaction)
   }
 
   //   消せる権限などの設定も考えておく
   async remove(id: number) {
     const transaction = await this.transactionsRepository.findOneBy({ id })
-    if (!transaction) throw new NotFoundException('データは存在しません')
+    if (!transaction) throw new NotFoundException('データが存在しません')
 
     await this.transactionsRepository.delete(id)
   }
