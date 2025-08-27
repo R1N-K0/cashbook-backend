@@ -9,6 +9,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { CategoriesController } from './categories/categories.controller'
 import { CategoriesModule } from './categories/categories.module'
+import { ReceiptsModule } from './receipts/receipts.module'
 import { TransactionsModule } from './transactions/transactions.module'
 
 @Module({
@@ -22,6 +23,7 @@ import { TransactionsModule } from './transactions/transactions.module'
     AuthModule,
     CategoriesModule,
     TransactionsModule,
+    ReceiptsModule,
   ],
   providers: [AppService],
 })

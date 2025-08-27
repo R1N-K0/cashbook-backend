@@ -110,6 +110,8 @@ export class TransactionsService {
       .leftJoinAndSelect('t.category', 'c')
       .leftJoin('t.user', 'u')
       .addSelect(['u.id', 'u.name'])
+      .leftJoin('t.receipts', 'r')
+      .addSelect(['r.s3Url', 'r.fileName', 'r.mimeType'])
       .where('t.id = :id', { id })
       .getOne()
 
