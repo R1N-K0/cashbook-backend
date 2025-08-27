@@ -39,7 +39,9 @@ export class ClosingLogsService {
   async findOne(id: number) {
     const closingLog = await this.LogsRepository.findOneBy({ id })
     if (!closingLog) throw new NotFoundException('データが存在しません')
-
-    return closingLog
+    return {
+      closingDate: closingLog.closingDate,
+      id: closingLog.id,
+    }
   }
 }

@@ -15,6 +15,11 @@ export class ClosingService {
     user: RequestUser,
     closingTransactionsDto: ClosingTransactionsDto,
   ) {
-    return
+    await this.transactionsService.closingTransactions(
+      user.id,
+      closingTransactionsDto,
+    )
+
+    return await this.closingLogsService.create(user)
   }
 }
