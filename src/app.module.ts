@@ -9,6 +9,8 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { CategoriesController } from './categories/categories.controller'
 import { CategoriesModule } from './categories/categories.module'
+import { ClosingLogsModule } from './closing-logs/closing-logs.module'
+import { ClosingModule } from './closing/closing.module'
 import { ReceiptsModule } from './receipts/receipts.module'
 import { TransactionsModule } from './transactions/transactions.module'
 
@@ -24,6 +26,8 @@ import { TransactionsModule } from './transactions/transactions.module'
     CategoriesModule,
     TransactionsModule,
     ReceiptsModule,
+    ClosingLogsModule,
+    ClosingModule,
   ],
   providers: [AppService],
 })
