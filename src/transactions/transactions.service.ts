@@ -176,6 +176,16 @@ export class TransactionsService {
     this.transactionsRepository.merge(transaction, updateTransactionDto)
     transaction.updatedUser = user.name
     await this.transactionsRepository.save(transaction)
+
+    const updatedTransaction = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.category', 'c')
+      .leftJoin('t.user', 'u')
+      .addSelect(['u.id', 'u.name'])
+      .where('t.id = :id', { id })
+      .getOne()
+
+    return updatedTransaction
   }
 
   async remove(id: number, user: RequestUser) {

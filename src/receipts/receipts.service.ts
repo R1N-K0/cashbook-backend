@@ -25,14 +25,9 @@ export class ReceiptsService {
     })
 
     await this.receiptsRepository.save(receipt)
-  }
+    const { s3Url, fileName, mimeType } = receipt
 
-  async findOne(id: number) {
-    const receipt = await this.receiptsRepository.findOneBy({ id })
-
-    if (!receipt) throw new NotFoundException('データが見つかりませんでした')
-
-    return receipt
+    return { fileName, mimeType, s3Url }
   }
 
   async remove(id: number) {
