@@ -1,8 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger'
+import { ApiLoginResponse } from 'src/auth/decorators/swagger-dto.decorator'
 
 export class LoginResponseDto {
-  @ApiProperty({
-    description: 'JWTによって発行されるトークン',
-  })
+  @ApiLoginResponse()
   accessToken: string
 }
