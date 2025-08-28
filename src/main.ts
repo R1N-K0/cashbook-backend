@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import cookieParser from 'cookie-parser'
 
 import { AppModule } from './app.module'
 
@@ -45,6 +46,7 @@ async function bootstrap() {
   SwaggerModule.setup('swagger', app, document, {
     jsonDocumentUrl: 'swagger/json',
   })
+  app.use(cookieParser())
   await app.listen(process.env.PORT ?? 3000)
 }
 bootstrap()
