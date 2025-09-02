@@ -54,10 +54,9 @@ export class TransactionsService {
         't.memo',
         't.amount',
         't.editable',
+        't.createdUser',
       ])
       .leftJoinAndSelect('t.category', 'c')
-      .leftJoin('t.user', 'u')
-      .addSelect(['u.id', 'u.name'])
       .where('1 = 1')
 
     if ('q' in query) {
