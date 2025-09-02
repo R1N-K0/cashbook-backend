@@ -40,8 +40,8 @@ export class TransactionResponseDto {
   @ApiProperty({ description: '取引ID', example: '2' })
   id: string
 
-  @ApiProperty({ description: '取引したユーザー情報', type: UserRes })
-  user: UserRes
+  @ApiProperty({ description: '担当ユーザー', example: 'test' })
+  createdUser: string
 
   @ApiProperty({ description: '取引日付 (YYYY-MM-DD)', example: '2025-08-26' })
   date: string
@@ -78,9 +78,6 @@ export class TransactionDetailDto extends TransactionResponseDto {
   })
   receipts: ReceiptRes[] | null
 
-  @ApiProperty({ description: '作成ユーザー', example: 'test' })
-  createdUser: string
-
   @ApiProperty({ description: '更新ユーザー', example: 'test' })
   updatedUser: string
 
@@ -98,9 +95,6 @@ export class TransactionDetailDto extends TransactionResponseDto {
 }
 
 export class TransactionUpdateDto extends TransactionResponseDto {
-  @ApiProperty({ description: '作成ユーザー', example: 'test' })
-  createdUser: string
-
   @ApiProperty({ description: '更新ユーザー', example: 'test' })
   updatedUser: string
 

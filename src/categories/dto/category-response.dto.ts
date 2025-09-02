@@ -12,4 +12,7 @@ export class CategoryResponseDto {
 
   @ApiProperty({ description: 'カラーコード', example: '#FFFFFF' })
   color: string
+
+  @ApiProperty({ description: '取引件数', example: 50 })
+  count: number
 }
