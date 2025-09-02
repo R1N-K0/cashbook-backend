@@ -21,7 +21,11 @@ export class CategoriesService {
   }
 
   async findAll() {
-    return await this.categoriesRepository.find()
+    const categories = await this.categoriesRepository
+      .createQueryBuilder('c')
+      .loadRelationCountAndMap('c.count', 'c.transactions')
+      .getMany()
+    return categories
   }
 
   async findOne(id: number) {
