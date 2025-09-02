@@ -37,7 +37,6 @@ export class TransactionsService {
     const transaction = this.transactionsRepository.create({
       ...createTransactionDto,
       category,
-      createdUser: user.name,
       updatedUser: user.name,
       user: loginUser,
     })
