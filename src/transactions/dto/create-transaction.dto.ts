@@ -61,5 +61,5 @@ export class CreateTransactionDto {
   @IsNotEmpty({ message: 'createUserは必須です' })
   @IsString()
   @MaxLength(255)
-  createUser: string
+  createdUser: string
 }
