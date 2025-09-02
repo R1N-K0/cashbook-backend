@@ -53,4 +53,13 @@ export class CreateTransactionDto {
   @IsNotEmpty({ message: 'amountは必須です' })
   @IsInt()
   amount: number
+
+  @ApiProperty({
+    description: '担当者を表すプロパティ',
+    example: '田中',
+  })
+  @IsNotEmpty({ message: 'createUserは必須です' })
+  @IsString()
+  @MaxLength(255)
+  createdUser: string
 }
