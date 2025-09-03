@@ -15,6 +15,11 @@ async function bootstrap() {
     }),
   )
 
+  app.enableCors({
+    credentials: true,
+    origin: 'http://localhost:3000',
+  })
+
   const options = new DocumentBuilder()
     .addGlobalResponse({
       description: 'サーバー側のエラー',
