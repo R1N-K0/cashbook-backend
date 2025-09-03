@@ -47,6 +47,7 @@ export class CategoriesService {
     const category = await this.categoriesRepository.findOneBy({ id })
     if (!category) throw new NotFoundException('存在しないデータです')
 
-    return this.categoriesRepository.delete(id)
+    await this.categoriesRepository.softDelete(id)
+    return { message: '削除しました' }
   }
 }

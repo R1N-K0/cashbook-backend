@@ -191,6 +191,8 @@ export class TransactionsService {
     if (!transaction) throw new NotFoundException('データが存在しません')
 
     if (!transaction.editable && user.role === UserRole.REGULAR)
-      await this.transactionsRepository.delete(id)
+      throw new ForbiddenException('このデータは削除できません')
+    await this.transactionsRepository.softDelete(id)
+    return { message: '削除しました' }
   }
 }
