@@ -11,4 +11,16 @@ export class FinanceService {
   ) {}
 
   async getDashboardData() {}
+
+  private async getTotalBalance() {
+    const totalBalance = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .select('SUM(t.amount)', 'sum')
+      .getRawOne()
+
+    return Number(totalBalance.sum) || 0
+  }
+  private async aggregateByMonth() {}
+  private aggregateByCategory() {}
+  private aggregateByDay() {}
 }
