@@ -1,5 +1,11 @@
 import { Transactions } from 'src/entities/transactions.entity'
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
+import {
+  Column,
+  DeleteDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm'
 
 export enum CategoryType {
   INCOME = 'income',
@@ -19,6 +25,9 @@ export class Categories {
 
   @Column('varchar', { length: 7 })
   color: string
+
+  @DeleteDateColumn()
+  deletedDate: Date
 
   @OneToMany(() => Transactions, (transaction) => transaction.category)
   transactions: Transactions[]
