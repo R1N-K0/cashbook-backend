@@ -4,6 +4,7 @@ import { Users } from 'src/entities/users.entity'
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -49,6 +50,9 @@ export class Transactions {
 
   @Column('boolean', { default: true })
   editable: boolean
+
+  @DeleteDateColumn()
+  readonly deletedDate: Date
 
   @CreateDateColumn()
   readonly created_at?: Date
