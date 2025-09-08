@@ -81,7 +81,7 @@ export class FinanceService {
       .groupBy('c.id')
       .select([
         'c.name AS name',
-        'COALESCE(SUM(t.amount), 0) AS sum',
+        'COALESCE(SUM(t.amount), 0) AS value',
         'c.color AS color',
       ])
       .where('c.type = :type', { type: CategoryType.EXPENSE })
@@ -90,7 +90,7 @@ export class FinanceService {
     const result = expenseByCategory.map((val) => ({
       color: val.color,
       name: val.name,
-      sum: Number(val.sum),
+      value: Number(val.value),
     }))
     return result
   }
