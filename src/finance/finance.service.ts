@@ -79,11 +79,16 @@ export class FinanceService {
       .createQueryBuilder('t')
       .leftJoin('t.category', 'c')
       .groupBy('c.id')
-      .select(['c.name AS name', 'COALESCE(SUM(t.amount), 0) AS sum'])
+      .select([
+        'c.name AS name',
+        'COALESCE(SUM(t.amount), 0) AS sum',
+        'c.color AS color',
+      ])
       .where('c.type = :type', { type: CategoryType.EXPENSE })
       .getRawMany()
 
     const result = expenseByCategory.map((val) => ({
+      color: val.color,
       name: val.name,
       sum: Number(val.sum),
     }))
