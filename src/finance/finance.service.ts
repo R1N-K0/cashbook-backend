@@ -2,17 +2,20 @@ import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { CategoryType } from 'src/entities/categories.entity'
 import { Transactions } from 'src/entities/transactions.entity'
-import { Repository } from 'typeorm'
+import { DataSource, Repository } from 'typeorm'
 
 @Injectable()
 export class FinanceService {
   constructor(
     @InjectRepository(Transactions)
     private readonly transactionsRepository: Repository<Transactions>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getDashboardData() {
-    const month = new Date().getMonth() + 1
+    const date = new Date()
+    const month = date.getMonth() + 1
+    const year = date.getFullYear()
 
     const totalBalance = await this.getTotalBalance()
     const currentMonthIncome = await this.getCurrentMonthIncome(month)
@@ -34,33 +37,41 @@ export class FinanceService {
   private async getTotalBalance() {
     const totalBalance = await this.transactionsRepository
       .createQueryBuilder('t')
-      .select('SUM(t.amount)', 'sum')
+      .leftJoin('t.category', 'c')
+      .select(
+        `
+          COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END), 0)
+          - COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END), 0)
+        `,
+        'balance',
+      )
       .getRawOne()
 
-    return Number(totalBalance.sum) || 0
+    return Number(totalBalance.balance)
   }
 
   private async getCurrentMonthIncome(month: number) {
     const currentMonthIncome = await this.transactionsRepository
       .createQueryBuilder('t')
-      .select('SUM(t.amount)', 'sum')
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .leftJoin('t.category', 'c')
       .where('c.type = :type', { type: CategoryType.INCOME })
       .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
       .getRawOne()
 
-    return currentMonthIncome.sum || 0
+    return Number(currentMonthIncome.sum)
   }
+
   private async getCurrentMonthExpense(month: number) {
     const currentMonthExpense = await this.transactionsRepository
       .createQueryBuilder('t')
-      .select('SUM(t.amount)', 'sum')
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .leftJoin('t.category', 'c')
       .where('c.type = :type', { type: CategoryType.EXPENSE })
       .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
       .getRawOne()
 
-    return currentMonthExpense.sum || 0
+    return Number(currentMonthExpense.sum)
   }
 
   private async aggregateByCategory() {
@@ -68,42 +79,61 @@ export class FinanceService {
       .createQueryBuilder('t')
       .leftJoin('t.category', 'c')
       .groupBy('c.id')
-      .select(['c.name AS name', 'SUM(t.amount) AS sum'])
+      .select(['c.name AS name', 'COALESCE(SUM(t.amount), 0) AS sum'])
       .where('c.type = :type', { type: CategoryType.EXPENSE })
-      .getRawOne()
+      .getRawMany()
 
-    return expenseByCategory || 0
+    const result = expenseByCategory.map((val) => ({
+      name: val.name,
+      sum: Number(val.sum),
+    }))
+    return result
   }
   private async getProfitLossByMonth() {
-    const profitLoss = await this.transactionsRepository
+    const profitLoss = await this.dataSource
       .createQueryBuilder()
       .addCommonTableExpression(
         `
-      SELECT 
-        TO_CHAR(
-          (date_trunc('year', CURRENT_DATE) + (n - 1) * interval '1 month') 
-          AT TIME ZONE 'Asia/Tokyo',
-          'YYYY-MM'
-        ) AS month
-      FROM generate_series(1, 12) AS n
+    SELECT 
+      TO_CHAR(
+        (date_trunc('year', CURRENT_DATE) + (n - 1) * interval '1 month') 
+        AT TIME ZONE 'Asia/Tokyo',
+        'YYYY-MM'
+      ) AS month
+    FROM generate_series(1, 12) AS n
     `,
         'months',
       )
       .from('months', 'm')
-      .leftJoin('transactions', 't', "TO_CHAR(t.date, 'YYYY-MM') = m.month")
-      .leftJoin('t.category', 'c')
+      .leftJoin(
+        (qb) =>
+          qb
+            .select([
+              "TO_CHAR(t.date, 'YYYY-MM') AS month",
+              "SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END) AS income",
+              "SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END) AS expense",
+            ])
+            .from('transactions', 't')
+            .leftJoin('t.category', 'c')
+            .groupBy("TO_CHAR(t.date, 'YYYY-MM')"),
+        't_summary',
+        't_summary.month = m.month',
+      )
       .select([
         'm.month AS month',
-        `COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END), 0) AS income`,
-        `COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END), 0) AS expense`,
-        `COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END), 0) 
-       - COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END), 0) AS profitLoss`,
+        'COALESCE(t_summary.income, 0)::numeric AS income',
+        'COALESCE(t_summary.expense, 0)::numeric AS expense',
+        '(COALESCE(t_summary.income, 0) - COALESCE(t_summary.expense, 0))::numeric AS profitLoss',
       ])
-      .groupBy('m.month')
-      .addGroupBy('c.type')
       .orderBy('m.month')
       .getRawMany()
 
-    return profitLoss
+    const result = profitLoss.map((val) => ({
+      expense: Number(val.expense),
+      income: Number(val.income),
+      month: val.month,
+      profitLoss: Number(val.profitloss),
+    }))
+    return result
   }
 }
