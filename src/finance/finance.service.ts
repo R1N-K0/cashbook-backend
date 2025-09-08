@@ -17,11 +17,15 @@ export class FinanceService {
     const totalBalance = await this.getTotalBalance()
     const currentMonthIncome = await this.getCurrentMonthIncome(month)
     const currentMonthExpense = await this.getCurrentMonthExpense(month)
+    const profitLoss = currentMonthIncome - currentMonthExpense
+    const expenseByCategory = await this.aggregateByCategory()
 
     return {
       balance: totalBalance,
       expense: currentMonthExpense,
+      expenseByCategory,
       income: currentMonthIncome,
+      profitLoss,
     }
   }
 
@@ -56,7 +60,17 @@ export class FinanceService {
 
     return currentMonthExpense.sum || 0
   }
-  private async aggregateByMonth() {}
-  private aggregateByCategory() {}
-  private aggregateByDay() {}
+
+  private async aggregateByCategory() {
+    const expenseByCategory = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .select('SUM(t.amount)', 'sum')
+      .leftJoin('t.category', 'c')
+      .groupBy('t.category')
+      .where('c.type = :type', { type: CategoryType.EXPENSE })
+      .getRawOne()
+
+    return expenseByCategory || 0
+  }
+  private async aggregateByDay() {}
 }
