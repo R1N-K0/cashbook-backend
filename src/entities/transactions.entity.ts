@@ -1,5 +1,6 @@
 import { Categories } from 'src/entities/categories.entity'
 import { TransactionsReceipts } from 'src/entities/transaction_receipts.entity'
+import { TransactionUsers } from 'src/entities/transaction_users.entity'
 import { Users } from 'src/entities/users.entity'
 import {
   Column,
@@ -25,6 +26,18 @@ export class Transactions {
   @OneToMany(() => TransactionsReceipts, (receipt) => receipt.transaction)
   receipts: TransactionsReceipts[]
 
+  @ManyToOne(
+    () => TransactionUsers,
+    (transactionUser) => transactionUser.transactions,
+  )
+  @JoinColumn({ name: 'created_user_id' })
+  createdUser: TransactionUsers
+
+  // 片方向リレーション
+  @ManyToOne(() => TransactionUsers)
+  @JoinColumn({ name: 'updated_user_id' })
+  updatedUser: TransactionUsers
+
   //   dateはstringにマッピングされるのでstring型で定義した.
   @Column('date')
   date: string
@@ -41,12 +54,6 @@ export class Transactions {
 
   @Column('int')
   amount: number
-
-  @Column('varchar', { name: 'created_user' })
-  createdUser: string
-
-  @Column('varchar', { name: 'updated_user' })
-  updatedUser: string
 
   @Column('boolean', { default: true })
   editable: boolean
