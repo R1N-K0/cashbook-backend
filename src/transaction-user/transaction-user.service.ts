@@ -19,6 +19,10 @@ export class TransactionUserService {
     return { message: '登録しました' }
   }
 
+  async findAll() {
+    return await this.transactionUserRepository.find()
+  }
+
   async findOne(id: number) {
     const transactionUser = await this.transactionUserRepository.findOneBy({
       id,
