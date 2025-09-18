@@ -34,7 +34,7 @@ export class Transactions {
   createdUser: TransactionUsers
 
   // 片方向リレーション
-  @ManyToOne(() => TransactionUsers)
+  @ManyToOne(() => TransactionUsers, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'updated_user_id' })
   updatedUser: TransactionUsers
 

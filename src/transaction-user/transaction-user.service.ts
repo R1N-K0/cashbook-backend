@@ -18,4 +18,8 @@ export class TransactionUserService {
     await this.transactionUserRepository.save(transactionUser)
     return { message: '登録しました' }
   }
+
+  async findOne(id: number) {
+    return await this.transactionUserRepository.findOneBy({ id })
+  }
 }

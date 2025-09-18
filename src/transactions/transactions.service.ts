@@ -9,6 +9,7 @@ import { CategoriesService } from 'src/categories/categories.service'
 import { ClosingTransactionsDto } from 'src/closing/dto/closing-transactions.dto'
 import { Transactions } from 'src/entities/transactions.entity'
 import { UserRole } from 'src/entities/users.entity'
+import { TransactionUserService } from 'src/transaction-user/transaction-user.service'
 import { CreateTransactionDto } from 'src/transactions/dto/create-transaction.dto'
 import { UpdateTransactionDto } from 'src/transactions/dto/update-transaction.dto'
 import { UsersService } from 'src/users/users.service'
@@ -23,6 +24,7 @@ export class TransactionsService {
     private readonly transactionsRepository: Repository<Transactions>,
     private readonly categoriesService: CategoriesService,
     private readonly usersService: UsersService,
+    private readonly transactionUserService: TransactionUserService,
   ) {}
 
   async create(user: RequestUser, createTransactionDto: CreateTransactionDto) {
@@ -32,12 +34,18 @@ export class TransactionsService {
 
     if (!category) throw new NotFoundException('カテゴリーが存在しません')
 
+    const createdUser = await this.transactionUserService.findOne(
+      createTransactionDto.createdUser,
+    )
+
+    if (!createdUser) throw new NotFoundException('担当者が存在しません')
+
     const loginUser = await this.usersService.findOneById(user.id)
     if (!loginUser) throw new NotFoundException('ユーザーが存在しません')
     const transaction = this.transactionsRepository.create({
       ...createTransactionDto,
       category,
-      updatedUser: user.name,
+      createdUser,
       user: loginUser,
     })
 
