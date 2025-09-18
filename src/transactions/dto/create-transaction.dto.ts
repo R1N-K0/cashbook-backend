@@ -58,7 +58,7 @@ export class CreateTransactionDto {
     description: '担当者IDを表すプロパティ',
     example: 1,
   })
-  @IsNotEmpty({ message: 'createdUserは必須です' })
+  @IsNotEmpty({ message: 'createdUserIdは必須です' })
   @IsInt({ message: 'データ形式が違います' })
-  createdUser: number
+  createdUserId: number
 }

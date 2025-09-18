@@ -35,10 +35,8 @@ export class TransactionsService {
     if (!category) throw new NotFoundException('カテゴリーが存在しません')
 
     const createdUser = await this.transactionUserService.findOne(
-      createTransactionDto.createdUser,
+      createTransactionDto.createdUserId,
     )
-
-    if (!createdUser) throw new NotFoundException('担当者が存在しません')
 
     const loginUser = await this.usersService.findOneById(user.id)
     if (!loginUser) throw new NotFoundException('ユーザーが存在しません')
@@ -179,8 +177,15 @@ export class TransactionsService {
       transaction.category = category
     }
 
+    if (updateTransactionDto.updatedUserId) {
+      const updatedUser = await this.transactionUserService.findOne(
+        updateTransactionDto.updatedUserId,
+      )
+      transaction.updatedUser = updatedUser
+    }
+
     this.transactionsRepository.merge(transaction, updateTransactionDto)
-    transaction.updatedUser = user.name
+
     await this.transactionsRepository.save(transaction)
 
     const updatedTransaction = await this.transactionsRepository

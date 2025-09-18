@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { TransactionUsers } from 'src/entities/transaction_users.entity'
 import { Repository } from 'typeorm'
@@ -20,6 +20,10 @@ export class TransactionUserService {
   }
 
   async findOne(id: number) {
-    return await this.transactionUserRepository.findOneBy({ id })
+    const transactionUser = await this.transactionUserRepository.findOneBy({
+      id,
+    })
+    if (!transactionUser) throw new NotFoundException('データが存在しません')
+    return transactionUser
   }
 }

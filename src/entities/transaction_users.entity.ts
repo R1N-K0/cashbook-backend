@@ -2,6 +2,7 @@ import { Transactions } from 'src/entities/transactions.entity'
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -28,4 +29,7 @@ export class TransactionUsers {
 
   @CreateDateColumn()
   readonly created_at?: Date
+
+  @DeleteDateColumn()
+  readonly deletedDate: Date
 }
