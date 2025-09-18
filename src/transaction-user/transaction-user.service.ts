@@ -28,11 +28,11 @@ export class TransactionUserService {
     const transactionUsers = await this.transactionUserRepository
       .createQueryBuilder('tu')
       .select([
-        'tu.id as id',
-        'tu.firstName as firstName',
-        'tu.lastName as lastName',
-        'tu.created_at as created_at',
-        'tu.limitAmount as limitAmount',
+        'tu.id AS id',
+        'tu.firstName AS "firstName"',
+        'tu.lastName AS "lastName"',
+        'tu.created_at AS "created_at"',
+        'tu.limitAmount AS "limitAmount"',
       ])
       .leftJoin('tu.transactions', 't')
       .where(
