@@ -36,20 +36,20 @@ export class TransactionsController {
     @Request() req: { user: RequestUser },
     @Body() createTransactionDto: CreateTransactionDto,
   ) {
-    return this.transactionsService.create(req.user, createTransactionDto)
+    return await this.transactionsService.create(req.user, createTransactionDto)
   }
 
   //   各クエリの存在判定で検索条件を分岐させる(未実装)
   @Get()
   @ApiFindAllTransaction()
   async findAll(@Query() query: SearchQuery) {
-    return this.transactionsService.findAll(query)
+    return await this.transactionsService.findAll(query)
   }
 
   @Get(':id')
   @ApiFindOneTransaction()
   async findOne(@Param('id') id: number) {
-    return this.transactionsService.findOne(id)
+    return await this.transactionsService.findOne(id)
   }
 
   @Patch(':id')
@@ -59,12 +59,16 @@ export class TransactionsController {
     @Request() req: { user: RequestUser },
     @Body() updateTransactionDto: UpdateTransactionDto,
   ) {
-    return this.transactionsService.update(id, req.user, updateTransactionDto)
+    return await this.transactionsService.update(
+      id,
+      req.user,
+      updateTransactionDto,
+    )
   }
 
   @Delete(':id')
   @ApiRemoveTransaction()
   async delete(@Param('id') id: number, @Request() req: { user: RequestUser }) {
-    return this.transactionsService.remove(id, req.user)
+    return await this.transactionsService.remove(id, req.user)
   }
 }

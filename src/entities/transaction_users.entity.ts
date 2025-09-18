@@ -18,6 +18,9 @@ export class TransactionUsers {
   @Column('varchar', { length: 255, name: 'first_name' })
   firstName: string
 
+  @Column('int', { name: 'limit_amount' })
+  limitAmount: number
+
   @OneToMany(() => Transactions, (transaction) => transaction.createdUser)
   transactions: Transactions[]
 
