@@ -2,11 +2,13 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { RequestUser } from 'src/auth/types/request-user'
 import { CategoriesService } from 'src/categories/categories.service'
 import { ClosingTransactionsDto } from 'src/closing/dto/closing-transactions.dto'
+import { CategoryType } from 'src/entities/categories.entity'
 import { Transactions } from 'src/entities/transactions.entity'
 import { UserRole } from 'src/entities/users.entity'
 import { TransactionUserService } from 'src/transaction-user/transaction-user.service'
@@ -37,6 +39,15 @@ export class TransactionsService {
     const createdUser = await this.transactionUserService.findOne(
       createTransactionDto.createdUserId,
     )
+
+    if (category.type === CategoryType.EXPENSE) {
+      const isLimit = await this.transactionUserService.isLimit(
+        createTransactionDto.createdUserId,
+        createTransactionDto.amount,
+      )
+      if (isLimit)
+        throw new UnprocessableEntityException('担当者の予算上限を超えています')
+    }
 
     const loginUser = await this.usersService.findOneById(user.id)
     if (!loginUser) throw new NotFoundException('ユーザーが存在しません')

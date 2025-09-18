@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
+import { CategoryType } from 'src/entities/categories.entity'
 import { TransactionUsers } from 'src/entities/transaction_users.entity'
 import { Repository } from 'typeorm'
 
@@ -38,24 +39,18 @@ export class TransactionUserService {
         'EXTRACT(YEAR FROM t.date) = :year AND EXTRACT(MONTH FROM t.date) = :month',
         { month, year },
       )
-      .addSelect('tu.limitAmount - SUM(t.amount)', 'remainingAmount')
+      .leftJoin('t.category', 'c')
+      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
+      .addSelect(
+        'tu.limitAmount - COALESCE(SUM(t.amount), 0)',
+        'remainingAmount',
+      )
       .groupBy('tu.id')
       .addOrderBy('tu.lastName', 'ASC')
       .addOrderBy('tu.firstName', 'ASC')
       .getRawMany()
 
     return transactionUsers
-
-    // return await this.transactionUserRepository.find({
-    //   order: { firstName: 'ASC', lastName: 'ASC' },
-    //   select: {
-    //     created_at: true,
-    //     firstName: true,
-    //     id: true,
-    //     lastName: true,
-    //     limitAmount: true,
-    //   },
-    // })
   }
 
   async findOne(id: number) {
@@ -64,5 +59,37 @@ export class TransactionUserService {
     })
     if (!transactionUser) throw new NotFoundException('データが存在しません')
     return transactionUser
+  }
+
+  async isLimit(id: number, amount: number): Promise<boolean> {
+    const now = new Date()
+    const month = now.getMonth() + 1
+    const year = now.getFullYear()
+    const remainingAmount = await this.getRemainingAmount(id, month, year)
+    return remainingAmount - amount < 0
+  }
+
+  private async getRemainingAmount(
+    id: number,
+    month: number,
+    year: number,
+  ): Promise<number> {
+    const result = await this.transactionUserRepository
+      .createQueryBuilder('tu')
+      .leftJoin('tu.transactions', 't')
+      .where(
+        'EXTRACT(YEAR FROM t.date) = :year AND EXTRACT(MONTH FROM t.date) = :month',
+        { month, year },
+      )
+      .leftJoin('t.category', 'c')
+      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
+      .select('tu.limitAmount - COALESCE(SUM(t.amount), 0)', 'remainingAmount')
+      .andWhere('tu.id = :id', { id })
+      .groupBy('tu.id')
+      .addOrderBy('tu.lastName', 'ASC')
+      .addOrderBy('tu.firstName', 'ASC')
+      .getRawOne()
+
+    return result.remainingAmount ? Number(result.remainingAmount) : 0
   }
 }
