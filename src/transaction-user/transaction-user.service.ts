@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { CategoryType } from 'src/entities/categories.entity'
 import { TransactionUsers } from 'src/entities/transaction_users.entity'
+import { Transactions } from 'src/entities/transactions.entity'
 import { Repository } from 'typeorm'
 
 @Injectable()
@@ -34,13 +35,25 @@ export class TransactionUserService {
         'tu.created_at AS "created_at"',
         'tu.limitAmount AS "limitAmount"',
       ])
-      .leftJoin('tu.transactions', 't')
-      .where(
-        'EXTRACT(YEAR FROM t.date) = :year AND EXTRACT(MONTH FROM t.date) = :month',
-        { month, year },
+      .leftJoin(
+        (qb) => {
+          const subQuery = qb
+            .from(Transactions, 't')
+            .where(
+              'EXTRACT(YEAR FROM t.date) = :year AND EXTRACT(MONTH FROM t.date) = :month',
+              { month, year },
+            )
+            .leftJoin('t.category', 'c')
+            .where('c.type = :type', { type: CategoryType.EXPENSE })
+            .select([
+              't.amount AS amount',
+              't.createdUser.id AS transactionUserId',
+            ])
+          return subQuery
+        },
+        't',
+        't.transactionUserId = tu.id',
       )
-      .leftJoin('t.category', 'c')
-      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
       .addSelect(
         'tu.limitAmount - COALESCE(SUM(t.amount), 0)',
         'remainingAmount',
