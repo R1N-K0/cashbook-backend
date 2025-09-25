@@ -13,6 +13,7 @@ import { ClosingLogsModule } from './closing-logs/closing-logs.module'
 import { ClosingModule } from './closing/closing.module'
 import { FinanceModule } from './finance/finance.module'
 import { ReceiptsModule } from './receipts/receipts.module'
+import { TransactionUserModule } from './transaction-user/transaction-user.module'
 import { TransactionsModule } from './transactions/transactions.module'
 
 @Module({
@@ -30,6 +31,7 @@ import { TransactionsModule } from './transactions/transactions.module'
     ClosingLogsModule,
     ClosingModule,
     FinanceModule,
+    TransactionUserModule,
   ],
   providers: [AppService],
 })

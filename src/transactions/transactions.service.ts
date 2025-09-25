@@ -2,17 +2,20 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { RequestUser } from 'src/auth/types/request-user'
 import { CategoriesService } from 'src/categories/categories.service'
 import { ClosingTransactionsDto } from 'src/closing/dto/closing-transactions.dto'
+import { CategoryType } from 'src/entities/categories.entity'
 import { Transactions } from 'src/entities/transactions.entity'
 import { UserRole } from 'src/entities/users.entity'
+import { TransactionUserService } from 'src/transaction-user/transaction-user.service'
 import { CreateTransactionDto } from 'src/transactions/dto/create-transaction.dto'
 import { UpdateTransactionDto } from 'src/transactions/dto/update-transaction.dto'
 import { UsersService } from 'src/users/users.service'
-import { Brackets, Repository } from 'typeorm'
+import { Repository } from 'typeorm'
 
 import type { SearchQuery } from 'src/transactions/types/search-query'
 
@@ -23,6 +26,7 @@ export class TransactionsService {
     private readonly transactionsRepository: Repository<Transactions>,
     private readonly categoriesService: CategoriesService,
     private readonly usersService: UsersService,
+    private readonly transactionUserService: TransactionUserService,
   ) {}
 
   async create(user: RequestUser, createTransactionDto: CreateTransactionDto) {
@@ -32,12 +36,25 @@ export class TransactionsService {
 
     if (!category) throw new NotFoundException('カテゴリーが存在しません')
 
+    const createdUser = await this.transactionUserService.findOne(
+      createTransactionDto.createdUserId,
+    )
+
+    if (category.type === CategoryType.EXPENSE) {
+      const isLimit = await this.transactionUserService.isLimit(
+        createTransactionDto.createdUserId,
+        createTransactionDto.amount,
+      )
+      if (isLimit)
+        throw new UnprocessableEntityException('担当者の予算上限を超えています')
+    }
+
     const loginUser = await this.usersService.findOneById(user.id)
     if (!loginUser) throw new NotFoundException('ユーザーが存在しません')
     const transaction = this.transactionsRepository.create({
       ...createTransactionDto,
       category,
-      updatedUser: user.name,
+      createdUser,
       user: loginUser,
     })
 
@@ -54,59 +71,66 @@ export class TransactionsService {
         't.memo',
         't.amount',
         't.editable',
-        't.createdUser',
       ])
       .leftJoinAndSelect('t.category', 'c')
-      .where('1 = 1')
+      .leftJoinAndSelect('t.createdUser', 'cu')
 
-    if ('q' in query) {
-      qb.andWhere(
-        new Brackets((qb) => {
-          qb.where('t.description LIKE :q', { q: `%${query.q}%` }).orWhere(
-            't.memo LIKE :q',
-            { q: `%${query.q}%` },
-          )
-        }),
-      )
-    }
+    //   .where('1 = 1')
 
-    if ('min' in query) {
-      qb.andWhere('t.amount >= :min', { min: query.min })
-    }
+    // if ('q' in query) {
+    //   qb.andWhere(
+    //     new Brackets((qb) => {
+    //       qb.where('t.description LIKE :q', { q: `%${query.q}%` }).orWhere(
+    //         't.memo LIKE :q',
+    //         { q: `%${query.q}%` },
+    //       )
+    //     }),
+    //   )
+    // }
 
-    if ('max' in query) {
-      qb.andWhere('t.amount <= :max', { max: query.max })
-    }
+    // if ('min' in query) {
+    //   qb.andWhere('t.amount >= :min', { min: query.min })
+    // }
 
-    if ('c' in query) {
-      qb.andWhere('c.id = :c', { c: query.c })
-    }
+    // if ('max' in query) {
+    //   qb.andWhere('t.amount <= :max', { max: query.max })
+    // }
 
-    if ('y' in query) {
-      qb.andWhere('EXTRACT(YEAR FROM t.date) = :year', { year: query.y })
-    }
+    // if ('c' in query) {
+    //   qb.andWhere('c.id = :c', { c: query.c })
+    // }
 
-    if ('m' in query) {
-      qb.andWhere('EXTRACT(MONTH FROM t.date) = :month', { month: query.m })
-    }
+    // if ('y' in query) {
+    //   qb.andWhere('EXTRACT(YEAR FROM t.date) = :year', { year: query.y })
+    // }
 
-    if ('limit' in query) qb.limit(query.limit)
+    // if ('m' in query) {
+    //   qb.andWhere('EXTRACT(MONTH FROM t.date) = :month', { month: query.m })
+    // }
 
-    if ('offset' in query) qb.offset(query.offset)
+    // if ('limit' in query) qb.limit(query.limit)
 
-    if ('sort' in query) {
-      const direction = query.sort?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'
-      qb.orderBy('t.date', direction)
-    }
+    // if ('offset' in query) qb.offset(query.offset)
+
+    // if ('sort' in query) {
+    //   const direction = query.sort?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'
+    //   qb.orderBy('t.date', direction)
+    // }
 
     const transactions = await qb.getMany()
-    return transactions
+
+    return transactions.map((t) => ({
+      ...t,
+      createdUser: `${t.createdUser?.lastName ?? ''} ${t.createdUser?.firstName ?? ''}`,
+    }))
   }
 
   async findOne(id: number) {
     const transaction = await this.transactionsRepository
       .createQueryBuilder('t')
       .leftJoinAndSelect('t.category', 'c')
+      .leftJoin('t.createdUser', 'cu')
+      .addSelect(['cu.lastName', 'cu.firstName'])
       .leftJoin('t.user', 'u')
       .addSelect(['u.id', 'u.name'])
       .leftJoin('t.receipts', 'r')
@@ -171,8 +195,15 @@ export class TransactionsService {
       transaction.category = category
     }
 
+    if (updateTransactionDto.updatedUserId) {
+      const updatedUser = await this.transactionUserService.findOne(
+        updateTransactionDto.updatedUserId,
+      )
+      transaction.updatedUser = updatedUser
+    }
+
     this.transactionsRepository.merge(transaction, updateTransactionDto)
-    transaction.updatedUser = user.name
+
     await this.transactionsRepository.save(transaction)
 
     const updatedTransaction = await this.transactionsRepository

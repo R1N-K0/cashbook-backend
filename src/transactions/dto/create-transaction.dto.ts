@@ -13,7 +13,7 @@ export class CreateTransactionDto {
     description: '取引に紐づけるカテゴリーのIDを表すプロパティ',
     example: 2,
   })
-  @IsInt()
+  @IsInt({ message: 'データ形式が違います' })
   @IsNotEmpty({ message: 'categoryIdは必須です' })
   categoryId: number
 
@@ -55,11 +55,10 @@ export class CreateTransactionDto {
   amount: number
 
   @ApiProperty({
-    description: '担当者を表すプロパティ',
-    example: '田中',
+    description: '担当者IDを表すプロパティ',
+    example: 1,
   })
-  @IsNotEmpty({ message: 'createUserは必須です' })
-  @IsString()
-  @MaxLength(255)
-  createdUser: string
+  @IsNotEmpty({ message: 'createdUserIdは必須です' })
+  @IsInt({ message: 'データ形式が違います' })
+  createdUserId: number
 }
