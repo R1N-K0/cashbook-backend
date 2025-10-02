@@ -42,6 +42,9 @@ export class Transactions {
   @Column('date')
   date: string
 
+  @Column('varchar', { length: 255 })
+  title: string
+
   @Column('varchar')
   description: string
 
@@ -54,6 +57,9 @@ export class Transactions {
 
   @Column('int')
   amount: number
+
+  @Column('boolean', { name: 'status' })
+  status: boolean
 
   @Column('boolean', { default: true })
   editable: boolean

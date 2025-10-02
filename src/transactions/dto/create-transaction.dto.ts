@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
 import {
+  IsBoolean,
   IsDateString,
   IsInt,
   IsNotEmpty,
@@ -25,6 +26,11 @@ export class CreateTransactionDto {
   @IsDateString()
   @IsNotEmpty({ message: 'dateは必須です' })
   date: string
+
+  @IsString({ message: 'データ形式が違います' })
+  @IsNotEmpty({ message: 'titleは必須です' })
+  @MaxLength(255)
+  title: string
 
   @ApiProperty({
     description: '取引の説明を表すプロパティ',
@@ -53,6 +59,10 @@ export class CreateTransactionDto {
   @IsNotEmpty({ message: 'amountは必須です' })
   @IsInt()
   amount: number
+
+  @IsBoolean({ message: 'データ形式が違います' })
+  @IsNotEmpty({ message: 'statusは必須です' })
+  status: boolean
 
   @ApiProperty({
     description: '担当者IDを表すプロパティ',
