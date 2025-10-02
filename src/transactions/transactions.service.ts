@@ -144,31 +144,15 @@ export class TransactionsService {
     return transaction
   }
 
+  // 月末締めを想定
   async closingTransactions(
     userId: number,
     closingTransactionsDto: ClosingTransactionsDto,
   ) {
-    const transactions = await this.transactionsRepository
-      .createQueryBuilder('t')
-      .innerJoin('t.user', 'u')
-      .where('u.id = :userId', { userId })
-      .andWhere('EXTRACT(YEAR FROM t.date) = :year', {
-        year: closingTransactionsDto.year,
-      })
-      .andWhere('EXTRACT(MONTH FROM t.date) = :month', {
-        month: closingTransactionsDto.month,
-      })
-      .andWhere('t.editable = true')
-      .getMany()
-
-    if (transactions.length === 0)
-      throw new NotFoundException('対象データが存在しません')
-
     await this.transactionsRepository
       .createQueryBuilder()
       .update()
       .set({ editable: false })
-      .where('user_id = :userId', { userId })
       .andWhere('EXTRACT(YEAR FROM date) = :year', {
         year: closingTransactionsDto.year,
       })
