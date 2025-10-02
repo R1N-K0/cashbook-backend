@@ -1,5 +1,6 @@
-import { Controller, Get, UseGuards } from '@nestjs/common'
+import { Controller, Get, Query, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
+import { ReportQueryDto } from 'src/finance/dto/report-query.dto'
 import { FinanceService } from 'src/finance/finance.service'
 
 @Controller('finance')
@@ -10,5 +11,10 @@ export class FinanceController {
   @Get()
   async getDashboardData() {
     return await this.financeService.getDashboardData()
+  }
+
+  @Get('report')
+  async getDataReport(@Query() q: ReportQueryDto) {
+    return await this.financeService.getDataReport(q)
   }
 }
