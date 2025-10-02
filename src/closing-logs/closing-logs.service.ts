@@ -17,10 +17,13 @@ export class ClosingLogsService {
     const loginUser = await this.usersService.findOneById(user.id)
     if (!loginUser) throw new NotFoundException('ユーザーが存在しません')
 
-    const now = new Date('2022/08/25')
-    const yyyy = String(now.getFullYear())
-    const mm = String(now.getMonth() + 1).padStart(2, '0')
-    const dd = String(now.getDate()).padStart(2, '0')
+    const now = new Date()
+    const tokyoNow = new Date(
+      now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }),
+    )
+    const yyyy = String(tokyoNow.getFullYear())
+    const mm = String(tokyoNow.getMonth() + 1).padStart(2, '0')
+    const dd = String(tokyoNow.getDate()).padStart(2, '0')
 
     const date = `${yyyy}-${mm}-${dd}`
 
