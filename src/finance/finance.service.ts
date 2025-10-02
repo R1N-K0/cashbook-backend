@@ -45,6 +45,7 @@ export class FinanceService {
         `,
         'balance',
       )
+      .where('t.status = true')
       .getRawOne()
 
     return Number(totalBalance.balance)
@@ -57,6 +58,7 @@ export class FinanceService {
       .leftJoin('t.category', 'c')
       .where('c.type = :type', { type: CategoryType.INCOME })
       .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+      .andWhere('t.status = true')
       .getRawOne()
 
     return Number(currentMonthIncome.sum)
@@ -69,6 +71,7 @@ export class FinanceService {
       .leftJoin('t.category', 'c')
       .where('c.type = :type', { type: CategoryType.EXPENSE })
       .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+      .andWhere('t.status = true')
       .getRawOne()
 
     return Number(currentMonthExpense.sum)
@@ -85,6 +88,7 @@ export class FinanceService {
         'c.color AS color',
       ])
       .where('c.type = :type', { type: CategoryType.EXPENSE })
+      .andWhere('t.status = true')
       .getRawMany()
 
     const result = expenseByCategory.map((val) => ({
@@ -119,6 +123,7 @@ export class FinanceService {
               "SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END) AS expense",
             ])
             .from('transactions', 't')
+            .where('t.status = true')
             .leftJoin('t.category', 'c')
             .groupBy("TO_CHAR(t.date, 'YYYY-MM')"),
         't_summary',
@@ -130,6 +135,7 @@ export class FinanceService {
         'COALESCE(t_summary.expense, 0)::numeric AS expense',
         '(COALESCE(t_summary.income, 0) - COALESCE(t_summary.expense, 0))::numeric AS profitLoss',
       ])
+
       .orderBy('m.month')
       .getRawMany()
 
