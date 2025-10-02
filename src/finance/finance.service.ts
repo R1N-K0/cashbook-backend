@@ -65,7 +65,6 @@ export class FinanceService {
       .leftJoin('t.category', 'c')
       .leftJoin('t.createdUser', 'cu')
       .where('1 = 1')
-
     if (year)
       selectedData.andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
 
@@ -96,7 +95,7 @@ export class FinanceService {
         'COALESCE(SUM(t.amount), 0) AS value',
         'c.color AS color',
       ])
-      .where('c.type = :type', { type: CategoryType.EXPENSE })
+      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
       .andWhere('t.status = true')
       .getRawMany()
 
@@ -114,7 +113,7 @@ export class FinanceService {
         'COALESCE(SUM(t.amount), 0) AS value',
         'c.color AS color',
       ])
-      .where('c.type = :type', { type: CategoryType.INCOME })
+      .andWhere('c.type = :type', { type: CategoryType.INCOME })
       .andWhere('t.status = true')
       .getRawMany()
 
@@ -132,7 +131,7 @@ export class FinanceService {
         'cu.firstName AS cu_firstName',
         'COALESCE(SUM(t.amount), 0) AS value',
       ])
-      .where('c.type = :type', { type: CategoryType.INCOME })
+      .andWhere('c.type = :type', { type: CategoryType.INCOME })
       .andWhere('t.status = true')
       .getRawMany()
 
