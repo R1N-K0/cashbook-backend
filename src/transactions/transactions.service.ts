@@ -67,9 +67,10 @@ export class TransactionsService {
       .select([
         't.id',
         't.date',
+        't.title',
         't.description',
-        't.memo',
         't.amount',
+        't.status',
         't.editable',
       ])
       .leftJoinAndSelect('t.category', 'c')
