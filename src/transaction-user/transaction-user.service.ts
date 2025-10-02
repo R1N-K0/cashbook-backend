@@ -35,6 +35,7 @@ export class TransactionUserService {
         'tu.created_at AS "created_at"',
         'tu.limitAmount AS "limitAmount"',
       ])
+
       .leftJoin(
         (qb) => {
           const subQuery = qb
@@ -58,6 +59,7 @@ export class TransactionUserService {
         'tu.limitAmount - COALESCE(SUM(t.amount), 0)',
         'remainingAmount',
       )
+
       .groupBy('tu.id')
       .addOrderBy('tu.lastName', 'ASC')
       .addOrderBy('tu.firstName', 'ASC')
@@ -116,5 +118,17 @@ export class TransactionUserService {
       .getRawOne()
 
     return result.remainingAmount ? Number(result.remainingAmount) : 0
+  }
+
+  private async getTransactionCount() {
+    const counts = await this.transactionUserRepository
+      .createQueryBuilder('tu')
+      .select('tu.id', 'id')
+      .leftJoin('tu.transactions', 't')
+      .addSelect('COUNT(t.id)', 'transactionCount')
+      .groupBy('tu.id')
+      .getRawMany()
+
+    return counts
   }
 }
