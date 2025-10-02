@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { CategoryType } from 'src/entities/categories.entity'
 import { Transactions } from 'src/entities/transactions.entity'
+import { ReportQueryDto } from 'src/finance/dto/report-query.dto'
 import { DataSource, Repository } from 'typeorm'
 
 @Injectable()
@@ -31,6 +32,129 @@ export class FinanceService {
       income: currentMonthIncome,
       profitLoss,
       profitLossByMonth,
+    }
+  }
+
+  async getDataReport(q: ReportQueryDto) {
+    const { year, month } = q
+
+    const transactions = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .select([
+        't.id',
+        't.date',
+        't.title',
+        't.description',
+        't.amount',
+        't.status',
+        't.editable',
+      ])
+      .leftJoinAndSelect('t.category', 'c')
+      .leftJoinAndSelect('t.createdUser', 'cu')
+      .where('1 = 1')
+
+    if (year)
+      transactions.andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
+    if (month)
+      transactions.andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+
+    const resultTransactions = await transactions.getMany()
+
+    const selectedData = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .leftJoin('t.category', 'c')
+      .leftJoin('t.createdUser', 'cu')
+      .where('1 = 1')
+
+    if (year)
+      selectedData.andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
+
+    if (month)
+      selectedData.andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+
+    const income = await selectedData
+      .clone()
+      .andWhere('t.status = true')
+      .andWhere('c.type = :type', { type: CategoryType.INCOME })
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
+      .getRawOne()
+
+    const expense = await selectedData
+      .clone()
+      .andWhere('t.status = true')
+      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
+      .getRawOne()
+
+    const balance = Number(income.sum) - Number(expense.sum)
+
+    const expenseByCategory = await selectedData
+      .clone()
+      .groupBy('c.id')
+      .select([
+        'c.name AS name',
+        'COALESCE(SUM(t.amount), 0) AS value',
+        'c.color AS color',
+      ])
+      .where('c.type = :type', { type: CategoryType.EXPENSE })
+      .andWhere('t.status = true')
+      .getRawMany()
+
+    const formatExpenseByCategory = expenseByCategory.map((val) => ({
+      color: val.color,
+      name: val.name,
+      value: Number(val.value),
+    }))
+
+    const incomeByCategory = await selectedData
+      .clone()
+      .groupBy('c.id')
+      .select([
+        'c.name AS name',
+        'COALESCE(SUM(t.amount), 0) AS value',
+        'c.color AS color',
+      ])
+      .where('c.type = :type', { type: CategoryType.INCOME })
+      .andWhere('t.status = true')
+      .getRawMany()
+
+    const formatIncomeByCategory = incomeByCategory.map((val) => ({
+      color: val.color,
+      name: val.name,
+      value: Number(val.value),
+    }))
+
+    const incomeByUser = await selectedData
+      .clone()
+      .groupBy('cu.id')
+      .select([
+        'cu.lastName AS cu_lastName',
+        'cu.firstName AS cu_firstName',
+        'COALESCE(SUM(t.amount), 0) AS value',
+      ])
+      .where('c.type = :type', { type: CategoryType.INCOME })
+      .andWhere('t.status = true')
+      .getRawMany()
+
+    const formatIncomeByUser = incomeByUser.map((val) => ({
+      name: `${val.cu_lastname} ${val.cu_firstname}`,
+      value: Number(val.value),
+    }))
+
+    const formatTransactions = resultTransactions.map((t) => ({
+      ...t,
+      createdUser: `${t.createdUser?.lastName ?? ''} ${t.createdUser?.firstName ?? ''}`,
+    }))
+
+    return {
+      balance,
+      count: formatTransactions.length,
+      expense: Number(expense.sum),
+      expenseByCategory: formatExpenseByCategory,
+      income: Number(income.sum),
+      incomeByCategory: formatIncomeByCategory,
+      incomeByUser: formatIncomeByUser,
+      transactions: formatTransactions,
     }
   }
 
@@ -98,6 +222,7 @@ export class FinanceService {
     }))
     return result
   }
+
   private async getProfitLossByMonth() {
     const profitLoss = await this.dataSource
       .createQueryBuilder()
