@@ -75,6 +75,7 @@ export class TransactionsService {
       ])
       .leftJoinAndSelect('t.category', 'c')
       .leftJoinAndSelect('t.createdUser', 'cu')
+      .leftJoinAndSelect('t.updatedUser', 'uu')
 
     //   .where('1 = 1')
 
@@ -120,9 +121,12 @@ export class TransactionsService {
 
     const transactions = await qb.getMany()
 
+    console.log(transactions)
+
     return transactions.map((t) => ({
       ...t,
       createdUser: `${t.createdUser?.lastName ?? ''} ${t.createdUser?.firstName ?? ''}`,
+      updatedUser: `${t.updatedUser?.lastName ?? ''} ${t.updatedUser?.firstName ?? ''}`,
     }))
   }
 
