@@ -23,13 +23,22 @@ export class FinanceService {
     const currentMonthExpense = await this.getCurrentMonthExpense(month)
     const profitLoss = currentMonthIncome - currentMonthExpense
     const expenseByCategory = await this.aggregateByCategory()
+    const incomeByCategory = await this.getIncomeByCategory()
     const profitLossByMonth = await this.getProfitLossByMonth()
+    const getCountTransactions = await this.getCountTransactions(month, year)
+    const getCountCancelTransactions = await this.getCountCancelTransactions(
+      month,
+      year,
+    )
 
     return {
       balance: totalBalance,
+      cancelCount: getCountCancelTransactions,
+      count: getCountTransactions,
       expense: currentMonthExpense,
       expenseByCategory,
       income: currentMonthIncome,
+      incomeByCategory,
       profitLoss,
       profitLossByMonth,
     }
@@ -70,6 +79,16 @@ export class FinanceService {
 
     if (month)
       selectedData.andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+
+    const count = await selectedData
+      .clone()
+      .andWhere('t.status = true')
+      .getCount()
+
+    const canselCount = await selectedData
+      .clone()
+      .andWhere('t.status = false')
+      .getCount()
 
     const income = await selectedData
       .clone()
@@ -164,7 +183,8 @@ export class FinanceService {
 
     return {
       balance,
-      count: formatTransactions.length,
+      cancelCount: Number(canselCount),
+      count: Number(count),
       expense: Number(expense.sum),
       expenseByCategory: formatExpenseByCategory,
       expenseByUser: formatExpenseByUser,
@@ -240,6 +260,28 @@ export class FinanceService {
     return result
   }
 
+  private async getIncomeByCategory() {
+    const incomeByCategory = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .leftJoin('t.category', 'c')
+      .groupBy('c.id')
+      .select([
+        'c.name AS name',
+        'COALESCE(SUM(t.amount), 0) AS value',
+        'c.color AS color',
+      ])
+      .where('c.type = :type', { type: CategoryType.INCOME })
+      .andWhere('t.status = true')
+      .getRawMany()
+
+    const result = incomeByCategory.map((val) => ({
+      color: val.color,
+      name: val.name,
+      value: Number(val.value),
+    }))
+    return result
+  }
+
   private async getProfitLossByMonth() {
     const profitLoss = await this.dataSource
       .createQueryBuilder()
@@ -276,17 +318,42 @@ export class FinanceService {
         'COALESCE(t_summary.income, 0)::numeric AS income',
         'COALESCE(t_summary.expense, 0)::numeric AS expense',
         '(COALESCE(t_summary.income, 0) - COALESCE(t_summary.expense, 0))::numeric AS profitLoss',
+        'SUM(COALESCE(t_summary.income, 0) - COALESCE(t_summary.expense, 0)) OVER (ORDER BY m.month) AS cumulativeBalance',
       ])
 
       .orderBy('m.month')
       .getRawMany()
 
     const result = profitLoss.map((val) => ({
+      cumulativeBalance: Number(val.cumulativebalance),
       expense: Number(val.expense),
       income: Number(val.income),
       month: val.month,
       profitLoss: Number(val.profitloss),
     }))
     return result
+  }
+
+  private getCountTransactions = async (month: number, year: number) => {
+    const getCountTransactions = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .select('COUNT(t.id)', 'count')
+      .where('EXTRACT(MONTH FROM t.date) = :month', { month })
+      .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
+      .andWhere('t.status = true')
+      .getRawOne()
+
+    return Number(getCountTransactions.count)
+  }
+
+  private getCountCancelTransactions = async (month: number, year: number) => {
+    const getCountCancelTransactions = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .select('COUNT(t.id)', 'count')
+      .where('EXTRACT(MONTH FROM t.date) = :month', { month })
+      .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
+      .andWhere('t.status = false')
+      .getRawOne()
+    return Number(getCountCancelTransactions.count)
   }
 }
