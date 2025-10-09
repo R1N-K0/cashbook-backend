@@ -17,10 +17,27 @@ export class FinanceService {
     const date = new Date()
     const month = date.getMonth() + 1
     const year = date.getFullYear()
-
+    const prevMonth = month === 1 ? 12 : month - 1
+    const prevYear = month === 1 ? year - 1 : year
     const totalBalance = await this.getTotalBalance()
-    const currentMonthIncome = await this.getCurrentMonthIncome(month)
-    const currentMonthExpense = await this.getCurrentMonthExpense(month)
+    const currentMonthIncome = await this.getCurrentMonthIncome(month, year)
+    const prevMonthIncome = await this.getCurrentMonthIncome(
+      prevMonth,
+      prevYear,
+    )
+    const monthIncomeChange =
+      prevMonthIncome === 0
+        ? 0
+        : ((currentMonthIncome - prevMonthIncome) / prevMonthIncome) * 100
+    const prevMonthExpense = await this.getCurrentMonthExpense(
+      prevMonth,
+      prevYear,
+    )
+    const currentMonthExpense = await this.getCurrentMonthExpense(month, year)
+    const monthExpenseChange =
+      prevMonthExpense === 0
+        ? 0
+        : ((currentMonthExpense - prevMonthExpense) / prevMonthExpense) * 100
     const profitLoss = currentMonthIncome - currentMonthExpense
     const expenseByCategory = await this.aggregateByCategory()
     const incomeByCategory = await this.getIncomeByCategory()
@@ -39,6 +56,8 @@ export class FinanceService {
       expenseByCategory,
       income: currentMonthIncome,
       incomeByCategory,
+      monthExpenseChange,
+      monthIncomeChange,
       profitLoss,
       profitLossByMonth,
     }
@@ -212,26 +231,28 @@ export class FinanceService {
     return Number(totalBalance.balance)
   }
 
-  private async getCurrentMonthIncome(month: number) {
+  private async getCurrentMonthIncome(month: number, year?: number) {
     const currentMonthIncome = await this.transactionsRepository
       .createQueryBuilder('t')
       .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .leftJoin('t.category', 'c')
       .where('c.type = :type', { type: CategoryType.INCOME })
       .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+      .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
       .andWhere('t.status = true')
       .getRawOne()
 
     return Number(currentMonthIncome.sum)
   }
 
-  private async getCurrentMonthExpense(month: number) {
+  private async getCurrentMonthExpense(month: number, year?: number) {
     const currentMonthExpense = await this.transactionsRepository
       .createQueryBuilder('t')
       .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .leftJoin('t.category', 'c')
       .where('c.type = :type', { type: CategoryType.EXPENSE })
       .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+      .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
       .andWhere('t.status = true')
       .getRawOne()
 
