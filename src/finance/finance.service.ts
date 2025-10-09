@@ -140,6 +140,23 @@ export class FinanceService {
       value: Number(val.value),
     }))
 
+    const expenseByUser = await selectedData
+      .clone()
+      .groupBy('cu.id')
+      .select([
+        'cu.lastName AS cu_lastName',
+        'cu.firstName AS cu_firstName',
+        'COALESCE(SUM(t.amount), 0) AS value',
+      ])
+      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
+      .andWhere('t.status = true')
+      .getRawMany()
+
+    const formatExpenseByUser = expenseByUser.map((val) => ({
+      name: `${val.cu_lastname} ${val.cu_firstname}`,
+      value: Number(val.value),
+    }))
+
     const formatTransactions = resultTransactions.map((t) => ({
       ...t,
       createdUser: `${t.createdUser?.lastName ?? ''} ${t.createdUser?.firstName ?? ''}`,
@@ -150,6 +167,7 @@ export class FinanceService {
       count: formatTransactions.length,
       expense: Number(expense.sum),
       expenseByCategory: formatExpenseByCategory,
+      expenseByUser: formatExpenseByUser,
       income: Number(income.sum),
       incomeByCategory: formatIncomeByCategory,
       incomeByUser: formatIncomeByUser,
