@@ -72,6 +72,7 @@ export class TransactionsService {
         't.amount',
         't.status',
         't.editable',
+        't.memo',
       ])
       .leftJoinAndSelect('t.category', 'c')
       .leftJoinAndSelect('t.createdUser', 'cu')
