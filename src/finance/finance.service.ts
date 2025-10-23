@@ -20,46 +20,93 @@ export class FinanceService {
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
     const totalBalance = await this.getTotalBalance()
+    const prevTotalBalance = await this.getPrevTotalBalance(month, year)
+    const balanceChange =
+      prevTotalBalance === 0
+        ? 0
+        : (
+            ((totalBalance - prevTotalBalance) / prevTotalBalance) *
+            100
+          ).toFixed(1)
     const currentMonthIncome = await this.getCurrentMonthIncome(month, year)
     const prevMonthIncome = await this.getCurrentMonthIncome(
       prevMonth,
       prevYear,
     )
-    const monthIncomeChange =
+    const incomeChange =
       prevMonthIncome === 0
         ? 0
-        : ((currentMonthIncome - prevMonthIncome) / prevMonthIncome) * 100
+        : (
+            ((currentMonthIncome - prevMonthIncome) / prevMonthIncome) *
+            100
+          ).toFixed(1)
     const prevMonthExpense = await this.getCurrentMonthExpense(
       prevMonth,
       prevYear,
     )
     const currentMonthExpense = await this.getCurrentMonthExpense(month, year)
-    const monthExpenseChange =
+    const expenseChange =
       prevMonthExpense === 0
         ? 0
-        : ((currentMonthExpense - prevMonthExpense) / prevMonthExpense) * 100
+        : (
+            ((currentMonthExpense - prevMonthExpense) / prevMonthExpense) *
+            100
+          ).toFixed(1)
     const profitLoss = currentMonthIncome - currentMonthExpense
+    const profitLossPrev = prevMonthIncome - prevMonthExpense
+    const profitLossChange =
+      profitLossPrev === 0
+        ? 0
+        : (
+            ((profitLoss - profitLossPrev) / Math.abs(profitLossPrev)) *
+            100
+          ).toFixed(1)
     const expenseByCategory = await this.aggregateByCategory()
     const incomeByCategory = await this.getIncomeByCategory()
     const profitLossByMonth = await this.getProfitLossByMonth()
     const getCountTransactions = await this.getCountTransactions(month, year)
+    const geyPrevCountTransactions = await this.getCountTransactions(
+      prevMonth,
+      prevYear,
+    )
+
+    const countChange =
+      geyPrevCountTransactions === 0
+        ? 0
+        : ((getCountTransactions - geyPrevCountTransactions) /
+            geyPrevCountTransactions) *
+          100
+
     const getCountCancelTransactions = await this.getCountCancelTransactions(
       month,
       year,
     )
+    const getPrevCountCancelTransactions =
+      await this.getCountCancelTransactions(prevMonth, prevYear)
+
+    const cancelCountChange =
+      getPrevCountCancelTransactions === 0
+        ? 0
+        : ((getCountCancelTransactions - getPrevCountCancelTransactions) /
+            getPrevCountCancelTransactions) *
+          100
 
     return {
       balance: totalBalance,
+      balanceChange,
       cancelCount: getCountCancelTransactions,
+      cancelCountChange,
       count: getCountTransactions,
+      countChange,
       expense: currentMonthExpense,
       expenseByCategory,
+      expenseChange,
       income: currentMonthIncome,
       incomeByCategory,
-      monthExpenseChange,
-      monthIncomeChange,
+      incomeChange,
       profitLoss,
       profitLossByMonth,
+      profitLossChange,
     }
   }
 
@@ -226,6 +273,25 @@ export class FinanceService {
         'balance',
       )
       .where('t.status = true')
+      .getRawOne()
+
+    return Number(totalBalance.balance)
+  }
+
+  private async getPrevTotalBalance(month: number, year: number) {
+    const totalBalance = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .leftJoin('t.category', 'c')
+      .select(
+        `
+          COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END), 0)
+          - COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END), 0)
+        `,
+        'balance',
+      )
+      .where('t.status = true')
+      .andWhere('EXTRACT(MONTH FROM t.date) < :month', { month })
+      .andWhere('EXTRACT(YEAR FROM t.date) <= :year', { year })
       .getRawOne()
 
     return Number(totalBalance.balance)
