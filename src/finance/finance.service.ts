@@ -19,85 +19,60 @@ export class FinanceService {
     const year = date.getFullYear()
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
-    const totalBalance = await this.getTotalBalance()
-    const prevTotalBalance = await this.getPrevTotalBalance(month, year)
-    const balanceChange =
-      prevTotalBalance === 0
-        ? 0
-        : (
-            ((totalBalance - prevTotalBalance) / prevTotalBalance) *
-            100
-          ).toFixed(1)
-    const currentMonthIncome = await this.getCurrentMonthIncome(month, year)
-    const prevMonthIncome = await this.getCurrentMonthIncome(
-      prevMonth,
-      prevYear,
-    )
-    const incomeChange =
-      prevMonthIncome === 0
-        ? 0
-        : (
-            ((currentMonthIncome - prevMonthIncome) / prevMonthIncome) *
-            100
-          ).toFixed(1)
-    const prevMonthExpense = await this.getCurrentMonthExpense(
-      prevMonth,
-      prevYear,
-    )
-    const currentMonthExpense = await this.getCurrentMonthExpense(month, year)
-    const expenseChange =
-      prevMonthExpense === 0
-        ? 0
-        : (
-            ((currentMonthExpense - prevMonthExpense) / prevMonthExpense) *
-            100
-          ).toFixed(1)
+
+    const [
+      totalBalance,
+      prevTotalBalance,
+      currentMonthIncome,
+      prevMonthIncome,
+      currentMonthExpense,
+      prevMonthExpense,
+      expenseByCategory,
+      incomeByCategory,
+      profitLossByMonth,
+      countTransactions,
+      prevCountTransactions,
+      cancelTransactions,
+      prevCancelTransactions,
+    ] = await Promise.all([
+      this.getTotalBalance(),
+      this.getPrevTotalBalance(month, year),
+      this.getCurrentMonthIncome(month, year),
+      this.getCurrentMonthIncome(prevMonth, prevYear),
+      this.getCurrentMonthExpense(month, year),
+      this.getCurrentMonthExpense(prevMonth, prevYear),
+      this.aggregateByCategory(),
+      this.getIncomeByCategory(),
+      this.getProfitLossByMonth(),
+      this.getCountTransactions(month, year),
+      this.getCountTransactions(prevMonth, prevYear),
+      this.getCountCancelTransactions(month, year),
+      this.getCountCancelTransactions(prevMonth, prevYear),
+    ])
+
+    const balanceChange = this.calcChange(totalBalance, prevTotalBalance)
+    const incomeChange = this.calcChange(currentMonthIncome, prevMonthIncome)
+    const expenseChange = this.calcChange(currentMonthExpense, prevMonthExpense)
 
     const profitLoss = currentMonthIncome - currentMonthExpense
     const profitLossPrev = prevMonthIncome - prevMonthExpense
-    const profitLossChange =
-      profitLossPrev === 0
-        ? 0
-        : (
-            ((profitLoss - profitLossPrev) / Math.abs(profitLossPrev)) *
-            100
-          ).toFixed(1)
-    const expenseByCategory = await this.aggregateByCategory()
-    const incomeByCategory = await this.getIncomeByCategory()
-    const profitLossByMonth = await this.getProfitLossByMonth()
-    const getCountTransactions = await this.getCountTransactions(month, year)
-    const geyPrevCountTransactions = await this.getCountTransactions(
-      prevMonth,
-      prevYear,
+    const profitLossChange = this.calcChange(profitLoss, profitLossPrev, true)
+
+    const countChange = this.calcChange(
+      countTransactions,
+      prevCountTransactions,
     )
-
-    const countChange =
-      geyPrevCountTransactions === 0
-        ? 0
-        : ((getCountTransactions - geyPrevCountTransactions) /
-            geyPrevCountTransactions) *
-          100
-
-    const getCountCancelTransactions = await this.getCountCancelTransactions(
-      month,
-      year,
+    const cancelCountChange = this.calcChange(
+      cancelTransactions,
+      prevCancelTransactions,
     )
-    const getPrevCountCancelTransactions =
-      await this.getCountCancelTransactions(prevMonth, prevYear)
-
-    const cancelCountChange =
-      getPrevCountCancelTransactions === 0
-        ? 0
-        : ((getCountCancelTransactions - getPrevCountCancelTransactions) /
-            getPrevCountCancelTransactions) *
-          100
 
     return {
       balance: totalBalance,
       balanceChange,
-      cancelCount: getCountCancelTransactions,
+      cancelCount: cancelTransactions,
       cancelCountChange,
-      count: getCountTransactions,
+      count: countTransactions,
       countChange,
       expense: currentMonthExpense,
       expenseByCategory,
@@ -113,14 +88,29 @@ export class FinanceService {
 
   async getDataReport(q: ReportQueryDto) {
     const { year, month } = q
-    if (!year || !month) {
+    if (!year || !month)
       throw new BadRequestException('Year and month are required')
-    }
+
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
 
-    const transactions = await this.transactionsRepository
+    const baseQB = this.transactionsRepository
       .createQueryBuilder('t')
+      .leftJoin('t.category', 'c')
+      .leftJoin('t.createdUser', 'cu')
+      .where('1=1')
+
+    const currentQB = baseQB
+      .clone()
+      .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
+      .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+
+    const prevQB = baseQB
+      .clone()
+      .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year: prevYear })
+      .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month: prevMonth })
+
+    const resultTransactions = await currentQB
       .select([
         't.id',
         't.date',
@@ -129,188 +119,41 @@ export class FinanceService {
         't.amount',
         't.status',
         't.editable',
+        'c',
+        'cu',
       ])
-      .leftJoinAndSelect('t.category', 'c')
-      .leftJoinAndSelect('t.createdUser', 'cu')
-      .where('1 = 1')
+      .getMany()
 
-    if (year)
-      transactions.andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
-    if (month)
-      transactions.andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+    const [count, prevCount, cancelCount, prevCancelCount] = await Promise.all([
+      this.getCount(currentQB, true),
+      this.getCount(prevQB, true),
+      this.getCount(currentQB, false),
+      this.getCount(prevQB, false),
+    ])
 
-    const resultTransactions = await transactions.getMany()
+    const countChange = this.calcChange(count, prevCount)
+    const cancelCountChange = this.calcChange(cancelCount, prevCancelCount)
 
-    const selectedData = await this.transactionsRepository
-      .createQueryBuilder('t')
-      .leftJoin('t.category', 'c')
-      .leftJoin('t.createdUser', 'cu')
-      .where('1 = 1')
-    if (year)
-      selectedData.andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
+    const [income, prevIncome, expense, prevExpense] = await Promise.all([
+      this.getSumByType(currentQB, CategoryType.INCOME),
+      this.getSumByType(prevQB, CategoryType.INCOME),
+      this.getSumByType(currentQB, CategoryType.EXPENSE),
+      this.getSumByType(prevQB, CategoryType.EXPENSE),
+    ])
 
-    if (month)
-      selectedData.andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
+    const incomeChange = this.calcChange(income, prevIncome)
+    const expenseChange = this.calcChange(expense, prevExpense)
 
-    const selectedPrevData = await this.transactionsRepository
-      .createQueryBuilder('t')
-      .leftJoin('t.category', 'c')
-      .where('1 = 1')
-      .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year: prevYear })
-      .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month: prevMonth })
+    const balance = income - expense
+    const balanceChange = this.calcChange(balance, prevIncome)
 
-    const count = await selectedData
-      .clone()
-      .andWhere('t.status = true')
-      .getCount()
-
-    const prevCount = await selectedPrevData
-      .clone()
-      .andWhere('t.status = true')
-      .getCount()
-
-    const countChange =
-      prevCount === 0 ? 0 : (((count - prevCount) / prevCount) * 100).toFixed(1)
-
-    const canselCount = await selectedData
-      .clone()
-      .andWhere('t.status = false')
-      .getCount()
-
-    const prevCanselCount = await selectedPrevData
-      .clone()
-      .andWhere('t.status = false')
-      .getCount()
-
-    const cancelCountChange =
-      prevCanselCount === 0
-        ? 0
-        : (((canselCount - prevCanselCount) / prevCanselCount) * 100).toFixed(1)
-
-    const income = await selectedData
-      .clone()
-      .andWhere('t.status = true')
-      .andWhere('c.type = :type', { type: CategoryType.INCOME })
-      .select('COALESCE(SUM(t.amount), 0)', 'sum')
-      .getRawOne()
-
-    const prevIncome = await selectedPrevData
-      .clone()
-      .andWhere('t.status = true')
-      .andWhere('c.type = :type', { type: CategoryType.INCOME })
-      .select('COALESCE(SUM(t.amount), 0)', 'sum')
-      .getRawOne()
-
-    const incomeChange =
-      Number(prevIncome.sum) === 0
-        ? 0
-        : (
-            ((Number(income.sum) - Number(prevIncome.sum)) /
-              Number(prevIncome.sum)) *
-            100
-          ).toFixed(1)
-
-    const expense = await selectedData
-      .clone()
-      .andWhere('t.status = true')
-      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
-      .select('COALESCE(SUM(t.amount), 0)', 'sum')
-      .getRawOne()
-
-    const prevExpense = await selectedPrevData
-      .clone()
-      .andWhere('t.status = true')
-      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
-      .select('COALESCE(SUM(t.amount), 0)', 'sum')
-      .getRawOne()
-
-    const expenseChange =
-      Number(prevExpense.sum) === 0
-        ? 0
-        : (
-            ((Number(expense.sum) - Number(prevExpense.sum)) /
-              Number(prevExpense.sum)) *
-            100
-          ).toFixed(1)
-
-    const balance = Number(income.sum) - Number(expense.sum)
-    const balanceChange =
-      Number(prevIncome.sum) === 0
-        ? 0
-        : (
-            ((balance - Number(prevIncome.sum)) / Number(prevIncome.sum)) *
-            100
-          ).toFixed(1)
-
-    const expenseByCategory = await selectedData
-      .clone()
-      .groupBy('c.id')
-      .select([
-        'c.name AS name',
-        'COALESCE(SUM(t.amount), 0) AS value',
-        'c.color AS color',
+    const [expenseByCategory, incomeByCategory, incomeByUser, expenseByUser] =
+      await Promise.all([
+        this.aggregateByType(currentQB, CategoryType.EXPENSE),
+        this.aggregateByType(currentQB, CategoryType.INCOME),
+        this.aggregateByUser(currentQB, CategoryType.INCOME),
+        this.aggregateByUser(currentQB, CategoryType.EXPENSE),
       ])
-      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
-      .andWhere('t.status = true')
-      .getRawMany()
-
-    const formatExpenseByCategory = expenseByCategory.map((val) => ({
-      color: val.color,
-      name: val.name,
-      value: Number(val.value),
-    }))
-
-    const incomeByCategory = await selectedData
-      .clone()
-      .groupBy('c.id')
-      .select([
-        'c.name AS name',
-        'COALESCE(SUM(t.amount), 0) AS value',
-        'c.color AS color',
-      ])
-      .andWhere('c.type = :type', { type: CategoryType.INCOME })
-      .andWhere('t.status = true')
-      .getRawMany()
-
-    const formatIncomeByCategory = incomeByCategory.map((val) => ({
-      color: val.color,
-      name: val.name,
-      value: Number(val.value),
-    }))
-
-    const incomeByUser = await selectedData
-      .clone()
-      .groupBy('cu.id')
-      .select([
-        'cu.lastName AS cu_lastName',
-        'cu.firstName AS cu_firstName',
-        'COALESCE(SUM(t.amount), 0) AS value',
-      ])
-      .andWhere('c.type = :type', { type: CategoryType.INCOME })
-      .andWhere('t.status = true')
-      .getRawMany()
-
-    const formatIncomeByUser = incomeByUser.map((val) => ({
-      name: `${val.cu_lastname} ${val.cu_firstname}`,
-      value: Number(val.value),
-    }))
-
-    const expenseByUser = await selectedData
-      .clone()
-      .groupBy('cu.id')
-      .select([
-        'cu.lastName AS cu_lastName',
-        'cu.firstName AS cu_firstName',
-        'COALESCE(SUM(t.amount), 0) AS value',
-      ])
-      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
-      .andWhere('t.status = true')
-      .getRawMany()
-
-    const formatExpenseByUser = expenseByUser.map((val) => ({
-      name: `${val.cu_lastname} ${val.cu_firstname}`,
-      value: Number(val.value),
-    }))
 
     const formatTransactions = resultTransactions.map((t) => ({
       ...t,
@@ -320,48 +163,112 @@ export class FinanceService {
     return {
       balance,
       balanceChange,
-      cancelCount: Number(canselCount),
+      cancelCount,
       cancelCountChange,
-      count: Number(count),
+      count,
       countChange,
-      expense: Number(expense.sum),
-      expenseByCategory: formatExpenseByCategory,
-      expenseByUser: formatExpenseByUser,
+      expense,
+      expenseByCategory,
+      expenseByUser,
       expenseChange,
-      income: Number(income.sum),
-      incomeByCategory: formatIncomeByCategory,
-      incomeByUser: formatIncomeByUser,
+      income,
+      incomeByCategory,
+      incomeByUser,
       incomeChange,
       transactions: formatTransactions,
     }
   }
 
+  private calcChange(current: number, prev: number, useAbs = false) {
+    if (prev === 0) return 0
+    const diff = ((current - prev) / (useAbs ? Math.abs(prev) : prev)) * 100
+    return Number(diff.toFixed(1))
+  }
+
+  private async getCount(qb, status: boolean) {
+    const result = await qb
+      .clone()
+      .andWhere('t.status = :status', { status })
+      .select('COUNT(t.id)', 'count')
+      .getRawOne()
+    return Number(result.count)
+  }
+
+  private async getSumByType(qb, type: CategoryType) {
+    const result = await qb
+      .clone()
+      .andWhere('t.status = true')
+      .andWhere('c.type = :type', { type })
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
+      .getRawOne()
+    return Number(result.sum)
+  }
+
+  private async aggregateByType(qb, type: CategoryType) {
+    const rows = await qb
+      .clone()
+      .andWhere('c.type = :type', { type })
+      .andWhere('t.status = true')
+      .groupBy('c.id')
+      .select([
+        'c.name AS name',
+        'COALESCE(SUM(t.amount), 0) AS value',
+        'c.color AS color',
+      ])
+      .getRawMany()
+
+    return rows.map((v) => ({
+      color: v.color,
+      name: v.name,
+      value: Number(v.value),
+    }))
+  }
+
+  private async aggregateByUser(qb, type: CategoryType) {
+    const rows = await qb
+      .clone()
+      .andWhere('c.type = :type', { type })
+      .andWhere('t.status = true')
+      .groupBy('cu.id')
+      .select([
+        'cu.lastName AS cu_lastName',
+        'cu.firstName AS cu_firstName',
+        'COALESCE(SUM(t.amount), 0) AS value',
+      ])
+      .getRawMany()
+
+    return rows.map((v) => ({
+      name: `${v.cu_lastname} ${v.cu_firstname}`,
+      value: Number(v.value),
+    }))
+  }
+
   private async getTotalBalance() {
-    const totalBalance = await this.transactionsRepository
+    const total = await this.transactionsRepository
       .createQueryBuilder('t')
       .leftJoin('t.category', 'c')
       .select(
         `
-          COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END), 0)
-          - COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END), 0)
-        `,
+        COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END), 0)
+        - COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END), 0)
+      `,
         'balance',
       )
       .where('t.status = true')
       .getRawOne()
 
-    return Number(totalBalance.balance)
+    return Number(total.balance)
   }
 
   private async getPrevTotalBalance(month: number, year: number) {
-    const totalBalance = await this.transactionsRepository
+    const prev = await this.transactionsRepository
       .createQueryBuilder('t')
       .leftJoin('t.category', 'c')
       .select(
         `
-          COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END), 0)
-          - COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END), 0)
-        `,
+        COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END), 0)
+        - COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END), 0)
+      `,
         'balance',
       )
       .where('t.status = true')
@@ -369,94 +276,91 @@ export class FinanceService {
       .andWhere('EXTRACT(YEAR FROM t.date) <= :year', { year })
       .getRawOne()
 
-    return Number(totalBalance.balance)
+    return Number(prev.balance)
   }
 
-  private async getCurrentMonthIncome(month: number, year?: number) {
-    const currentMonthIncome = await this.transactionsRepository
+  private async getCurrentMonthIncome(month: number, year: number) {
+    const income = await this.transactionsRepository
       .createQueryBuilder('t')
-      .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .leftJoin('t.category', 'c')
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .where('c.type = :type', { type: CategoryType.INCOME })
       .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
       .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
       .andWhere('t.status = true')
       .getRawOne()
 
-    return Number(currentMonthIncome.sum)
+    return Number(income.sum)
   }
 
-  private async getCurrentMonthExpense(month: number, year?: number) {
-    const currentMonthExpense = await this.transactionsRepository
+  private async getCurrentMonthExpense(month: number, year: number) {
+    const expense = await this.transactionsRepository
       .createQueryBuilder('t')
-      .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .leftJoin('t.category', 'c')
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .where('c.type = :type', { type: CategoryType.EXPENSE })
       .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
       .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
       .andWhere('t.status = true')
       .getRawOne()
 
-    return Number(currentMonthExpense.sum)
+    return Number(expense.sum)
   }
 
   private async aggregateByCategory() {
-    const expenseByCategory = await this.transactionsRepository
+    const rows = await this.transactionsRepository
       .createQueryBuilder('t')
       .leftJoin('t.category', 'c')
+      .where('c.type = :type', { type: CategoryType.EXPENSE })
+      .andWhere('t.status = true')
       .groupBy('c.id')
       .select([
         'c.name AS name',
         'COALESCE(SUM(t.amount), 0) AS value',
         'c.color AS color',
       ])
-      .where('c.type = :type', { type: CategoryType.EXPENSE })
-      .andWhere('t.status = true')
       .getRawMany()
 
-    const result = expenseByCategory.map((val) => ({
-      color: val.color,
-      name: val.name,
-      value: Number(val.value),
+    return rows.map((v) => ({
+      color: v.color,
+      name: v.name,
+      value: Number(v.value),
     }))
-    return result
   }
 
   private async getIncomeByCategory() {
-    const incomeByCategory = await this.transactionsRepository
+    const rows = await this.transactionsRepository
       .createQueryBuilder('t')
       .leftJoin('t.category', 'c')
+      .where('c.type = :type', { type: CategoryType.INCOME })
+      .andWhere('t.status = true')
       .groupBy('c.id')
       .select([
         'c.name AS name',
         'COALESCE(SUM(t.amount), 0) AS value',
         'c.color AS color',
       ])
-      .where('c.type = :type', { type: CategoryType.INCOME })
-      .andWhere('t.status = true')
       .getRawMany()
 
-    const result = incomeByCategory.map((val) => ({
-      color: val.color,
-      name: val.name,
-      value: Number(val.value),
+    return rows.map((v) => ({
+      color: v.color,
+      name: v.name,
+      value: Number(v.value),
     }))
-    return result
   }
 
   private async getProfitLossByMonth() {
-    const profitLoss = await this.dataSource
+    const data = await this.dataSource
       .createQueryBuilder()
       .addCommonTableExpression(
         `
-    SELECT 
-      TO_CHAR(
-        (date_trunc('year', CURRENT_DATE) + (n - 1) * interval '1 month') 
-        AT TIME ZONE 'Asia/Tokyo',
-        'YYYY-MM'
-      ) AS month
-    FROM generate_series(1, 12) AS n
-    `,
+          SELECT 
+            TO_CHAR(
+              (date_trunc('year', CURRENT_DATE) + (n - 1) * interval '1 month') 
+              AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM'
+            ) AS month
+          FROM generate_series(1, 12) AS n
+        `,
         'months',
       )
       .from('months', 'm')
@@ -469,8 +373,8 @@ export class FinanceService {
               "SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END) AS expense",
             ])
             .from('transactions', 't')
-            .where('t.status = true')
             .leftJoin('t.category', 'c')
+            .where('t.status = true')
             .groupBy("TO_CHAR(t.date, 'YYYY-MM')"),
         't_summary',
         't_summary.month = m.month',
@@ -482,40 +386,37 @@ export class FinanceService {
         '(COALESCE(t_summary.income, 0) - COALESCE(t_summary.expense, 0))::numeric AS profitLoss',
         'SUM(COALESCE(t_summary.income, 0) - COALESCE(t_summary.expense, 0)) OVER (ORDER BY m.month) AS cumulativeBalance',
       ])
-
       .orderBy('m.month')
       .getRawMany()
 
-    const result = profitLoss.map((val) => ({
-      cumulativeBalance: Number(val.cumulativebalance),
-      expense: Number(val.expense),
-      income: Number(val.income),
-      month: val.month,
-      profitLoss: Number(val.profitloss),
+    return data.map((v) => ({
+      cumulativeBalance: Number(v.cumulativebalance),
+      expense: Number(v.expense),
+      income: Number(v.income),
+      month: v.month,
+      profitLoss: Number(v.profitloss),
     }))
-    return result
   }
 
-  private getCountTransactions = async (month: number, year: number) => {
-    const getCountTransactions = await this.transactionsRepository
+  private async getCountTransactions(month: number, year: number) {
+    const result = await this.transactionsRepository
       .createQueryBuilder('t')
       .select('COUNT(t.id)', 'count')
       .where('EXTRACT(MONTH FROM t.date) = :month', { month })
       .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
       .andWhere('t.status = true')
       .getRawOne()
-
-    return Number(getCountTransactions.count)
+    return Number(result.count)
   }
 
-  private getCountCancelTransactions = async (month: number, year: number) => {
-    const getCountCancelTransactions = await this.transactionsRepository
+  private async getCountCancelTransactions(month: number, year: number) {
+    const result = await this.transactionsRepository
       .createQueryBuilder('t')
       .select('COUNT(t.id)', 'count')
       .where('EXTRACT(MONTH FROM t.date) = :month', { month })
       .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year })
       .andWhere('t.status = false')
       .getRawOne()
-    return Number(getCountCancelTransactions.count)
+    return Number(result.count)
   }
 }
