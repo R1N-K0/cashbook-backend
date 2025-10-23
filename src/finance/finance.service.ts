@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { CategoryType } from 'src/entities/categories.entity'
 import { Transactions } from 'src/entities/transactions.entity'
@@ -20,51 +20,104 @@ export class FinanceService {
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
     const totalBalance = await this.getTotalBalance()
+    const prevTotalBalance = await this.getPrevTotalBalance(month, year)
+    const balanceChange =
+      prevTotalBalance === 0
+        ? 0
+        : (
+            ((totalBalance - prevTotalBalance) / prevTotalBalance) *
+            100
+          ).toFixed(1)
     const currentMonthIncome = await this.getCurrentMonthIncome(month, year)
     const prevMonthIncome = await this.getCurrentMonthIncome(
       prevMonth,
       prevYear,
     )
-    const monthIncomeChange =
+    const incomeChange =
       prevMonthIncome === 0
         ? 0
-        : ((currentMonthIncome - prevMonthIncome) / prevMonthIncome) * 100
+        : (
+            ((currentMonthIncome - prevMonthIncome) / prevMonthIncome) *
+            100
+          ).toFixed(1)
     const prevMonthExpense = await this.getCurrentMonthExpense(
       prevMonth,
       prevYear,
     )
     const currentMonthExpense = await this.getCurrentMonthExpense(month, year)
-    const monthExpenseChange =
+    const expenseChange =
       prevMonthExpense === 0
         ? 0
-        : ((currentMonthExpense - prevMonthExpense) / prevMonthExpense) * 100
+        : (
+            ((currentMonthExpense - prevMonthExpense) / prevMonthExpense) *
+            100
+          ).toFixed(1)
+
     const profitLoss = currentMonthIncome - currentMonthExpense
+    const profitLossPrev = prevMonthIncome - prevMonthExpense
+    const profitLossChange =
+      profitLossPrev === 0
+        ? 0
+        : (
+            ((profitLoss - profitLossPrev) / Math.abs(profitLossPrev)) *
+            100
+          ).toFixed(1)
     const expenseByCategory = await this.aggregateByCategory()
     const incomeByCategory = await this.getIncomeByCategory()
     const profitLossByMonth = await this.getProfitLossByMonth()
     const getCountTransactions = await this.getCountTransactions(month, year)
+    const geyPrevCountTransactions = await this.getCountTransactions(
+      prevMonth,
+      prevYear,
+    )
+
+    const countChange =
+      geyPrevCountTransactions === 0
+        ? 0
+        : ((getCountTransactions - geyPrevCountTransactions) /
+            geyPrevCountTransactions) *
+          100
+
     const getCountCancelTransactions = await this.getCountCancelTransactions(
       month,
       year,
     )
+    const getPrevCountCancelTransactions =
+      await this.getCountCancelTransactions(prevMonth, prevYear)
+
+    const cancelCountChange =
+      getPrevCountCancelTransactions === 0
+        ? 0
+        : ((getCountCancelTransactions - getPrevCountCancelTransactions) /
+            getPrevCountCancelTransactions) *
+          100
 
     return {
       balance: totalBalance,
+      balanceChange,
       cancelCount: getCountCancelTransactions,
+      cancelCountChange,
       count: getCountTransactions,
+      countChange,
       expense: currentMonthExpense,
       expenseByCategory,
+      expenseChange,
       income: currentMonthIncome,
       incomeByCategory,
-      monthExpenseChange,
-      monthIncomeChange,
+      incomeChange,
       profitLoss,
       profitLossByMonth,
+      profitLossChange,
     }
   }
 
   async getDataReport(q: ReportQueryDto) {
     const { year, month } = q
+    if (!year || !month) {
+      throw new BadRequestException('Year and month are required')
+    }
+    const prevMonth = month === 1 ? 12 : month - 1
+    const prevYear = month === 1 ? year - 1 : year
 
     const transactions = await this.transactionsRepository
       .createQueryBuilder('t')
@@ -99,15 +152,40 @@ export class FinanceService {
     if (month)
       selectedData.andWhere('EXTRACT(MONTH FROM t.date) = :month', { month })
 
+    const selectedPrevData = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .leftJoin('t.category', 'c')
+      .where('1 = 1')
+      .andWhere('EXTRACT(YEAR FROM t.date) = :year', { year: prevYear })
+      .andWhere('EXTRACT(MONTH FROM t.date) = :month', { month: prevMonth })
+
     const count = await selectedData
       .clone()
       .andWhere('t.status = true')
       .getCount()
 
+    const prevCount = await selectedPrevData
+      .clone()
+      .andWhere('t.status = true')
+      .getCount()
+
+    const countChange =
+      prevCount === 0 ? 0 : (((count - prevCount) / prevCount) * 100).toFixed(1)
+
     const canselCount = await selectedData
       .clone()
       .andWhere('t.status = false')
       .getCount()
+
+    const prevCanselCount = await selectedPrevData
+      .clone()
+      .andWhere('t.status = false')
+      .getCount()
+
+    const cancelCountChange =
+      prevCanselCount === 0
+        ? 0
+        : (((canselCount - prevCanselCount) / prevCanselCount) * 100).toFixed(1)
 
     const income = await selectedData
       .clone()
@@ -116,6 +194,22 @@ export class FinanceService {
       .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .getRawOne()
 
+    const prevIncome = await selectedPrevData
+      .clone()
+      .andWhere('t.status = true')
+      .andWhere('c.type = :type', { type: CategoryType.INCOME })
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
+      .getRawOne()
+
+    const incomeChange =
+      Number(prevIncome.sum) === 0
+        ? 0
+        : (
+            ((Number(income.sum) - Number(prevIncome.sum)) /
+              Number(prevIncome.sum)) *
+            100
+          ).toFixed(1)
+
     const expense = await selectedData
       .clone()
       .andWhere('t.status = true')
@@ -123,7 +217,30 @@ export class FinanceService {
       .select('COALESCE(SUM(t.amount), 0)', 'sum')
       .getRawOne()
 
+    const prevExpense = await selectedPrevData
+      .clone()
+      .andWhere('t.status = true')
+      .andWhere('c.type = :type', { type: CategoryType.EXPENSE })
+      .select('COALESCE(SUM(t.amount), 0)', 'sum')
+      .getRawOne()
+
+    const expenseChange =
+      Number(prevExpense.sum) === 0
+        ? 0
+        : (
+            ((Number(expense.sum) - Number(prevExpense.sum)) /
+              Number(prevExpense.sum)) *
+            100
+          ).toFixed(1)
+
     const balance = Number(income.sum) - Number(expense.sum)
+    const balanceChange =
+      Number(prevIncome.sum) === 0
+        ? 0
+        : (
+            ((balance - Number(prevIncome.sum)) / Number(prevIncome.sum)) *
+            100
+          ).toFixed(1)
 
     const expenseByCategory = await selectedData
       .clone()
@@ -202,14 +319,19 @@ export class FinanceService {
 
     return {
       balance,
+      balanceChange,
       cancelCount: Number(canselCount),
+      cancelCountChange,
       count: Number(count),
+      countChange,
       expense: Number(expense.sum),
       expenseByCategory: formatExpenseByCategory,
       expenseByUser: formatExpenseByUser,
+      expenseChange,
       income: Number(income.sum),
       incomeByCategory: formatIncomeByCategory,
       incomeByUser: formatIncomeByUser,
+      incomeChange,
       transactions: formatTransactions,
     }
   }
@@ -226,6 +348,25 @@ export class FinanceService {
         'balance',
       )
       .where('t.status = true')
+      .getRawOne()
+
+    return Number(totalBalance.balance)
+  }
+
+  private async getPrevTotalBalance(month: number, year: number) {
+    const totalBalance = await this.transactionsRepository
+      .createQueryBuilder('t')
+      .leftJoin('t.category', 'c')
+      .select(
+        `
+          COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount ELSE 0 END), 0)
+          - COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END), 0)
+        `,
+        'balance',
+      )
+      .where('t.status = true')
+      .andWhere('EXTRACT(MONTH FROM t.date) < :month', { month })
+      .andWhere('EXTRACT(YEAR FROM t.date) <= :year', { year })
       .getRawOne()
 
     return Number(totalBalance.balance)
